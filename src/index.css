@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at 6% 0%, rgba(45, 212, 191, 0.14) 0, transparent 38%),
+    radial-gradient(circle at 100% 100%, rgba(251, 113, 133, 0.14) 0, transparent 35%),
+    #f8fafc;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Glass Effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+/* Premium Button Hover */
+.btn-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Loading Skeleton */
+@keyframes shine {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 1000px 100%;
+  animation: shine 2s infinite;
+  border-radius: 8px;
+}
+
+/* Form Validation */
+.form-input.error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+.form-input.valid {
+  border-color: #10b981 !important;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Product Hover */
+.product-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.product-card:hover {
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+  transform: translateY(-4px);
+}
+
+/* Wishlist Heart Animation */
+.heart-icon {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.heart-icon.active {
+  color: #f43f5e;
+  transform: scale(1.2);
+}
+
+.card-surface {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.page-enter {
+  animation: pageEnter 0.45s ease-out;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Grid */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+}
