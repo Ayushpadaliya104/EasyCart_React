@@ -1,23 +1,45 @@
-import React, { useState } from 'react';
-import { mockOrders } from '../../utils/mockData';
+import React, { useEffect, useState } from 'react';
 import { FiEdit2, FiSearch } from 'react-icons/fi';
 import AdminLayout from '../../components/AdminLayout';
+import { fetchAllOrdersApi, updateOrderStatusApi } from '../../services/orderService';
 
 function OrderManagement() {
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingOrder, setEditingOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const orderList = await fetchAllOrdersApi();
+        setOrders(orderList);
+      } catch (fetchError) {
+        setError(fetchError?.response?.data?.message || 'Failed to load orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, []);
 
   const filteredOrders = orders.filter(o =>
     o.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const updateOrderStatus = (orderId, status) => {
-    setOrders(orders.map(o => 
-      o.id === orderId ? { ...o, status } : o
-    ));
-    setEditingOrder(null);
+  const updateOrderStatus = async (orderId, status) => {
+    try {
+      const updatedOrder = await updateOrderStatusApi(orderId, status);
+      setOrders(prev => prev.map((o) => (o.id === orderId ? updatedOrder : o)));
+      setEditingOrder(null);
+    } catch (updateError) {
+      alert(updateError?.response?.data?.message || 'Failed to update status');
+    }
   };
 
   const getStatusColor = (status) => {
@@ -63,11 +85,19 @@ function OrderManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map(order => (
+                {loading ? (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={6}>Loading orders...</td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-rose-600" colSpan={6}>{error}</td>
+                  </tr>
+                ) : filteredOrders.map(order => (
               <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                 <td className="px-6 py-4 text-sm font-medium text-slate-900">{order.id}</td>
-                <td className="px-6 py-4 text-sm text-slate-600">Customer #{order.userId}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-slate-900">${order.total.toFixed(2)}</td>
+                <td className="px-6 py-4 text-sm text-slate-600">{order.userName || order.userEmail || `Customer #${order.userId}`}</td>
+                <td className="px-6 py-4 text-sm font-semibold text-slate-900">₹{order.total.toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm text-slate-600">{order.date}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>

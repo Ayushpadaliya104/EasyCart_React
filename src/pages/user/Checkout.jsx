@@ -3,15 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { validateField } from '../../utils/validators';
 import { FiArrowRight } from 'react-icons/fi';
+import { createOrderApi } from '../../services/orderService';
 
 function Checkout() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { cartItems, getTotalPrice, clearCart } = useCart();
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Review
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -62,14 +67,48 @@ function Checkout() {
   };
 
   const handleNextStep = () => {
+    setApiError('');
     if (validateStep()) {
       setStep(step + 1);
     }
   };
 
-  const handlePlaceOrder = () => {
-    clearCart();
-    navigate('/orders');
+  const handlePlaceOrder = async () => {
+    if (!user) {
+      setApiError('Please login to place an order.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setApiError('');
+
+      await createOrderApi({
+        items: cartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity
+        })),
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipcode: formData.zipcode
+        },
+        paymentMethod
+      });
+
+      clearCart();
+      navigate('/orders');
+    } catch (error) {
+      setApiError(error?.response?.data?.message || 'Failed to place order');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -336,6 +375,12 @@ function Checkout() {
                 <div className="bg-white rounded-lg shadow-soft p-8 mb-8">
                   <h2 className="text-2xl font-bold mb-6">Order Review</h2>
 
+                  {apiError && (
+                    <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                      {apiError}
+                    </p>
+                  )}
+
                   <div className="mb-6 pb-6 border-b">
                     <h3 className="font-semibold mb-3">Shipping Address:</h3>
                     <p className="text-gray-700">
@@ -362,9 +407,10 @@ function Checkout() {
                     </button>
                     <button
                       onClick={handlePlaceOrder}
+                      disabled={isSubmitting}
                       className="flex-1 bg-primary text-white py-3 rounded-lg font-semibold hover:bg-opacity-90 transition btn-hover-lift"
                     >
-                      Place Order
+                      {isSubmitting ? 'Placing Order...' : 'Place Order'}
                     </button>
                   </div>
                 </div>

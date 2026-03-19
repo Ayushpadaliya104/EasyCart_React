@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
-import { mockProducts } from '../../utils/mockData';
+import React, { useEffect, useState } from 'react';
 import { FiEdit2, FiTrash2, FiPlus, FiSearch, FiX } from 'react-icons/fi';
 import AdminLayout from '../../components/AdminLayout';
+import {
+  createProductApi,
+  deleteProductApi,
+  fetchCategories,
+  fetchProducts,
+  updateProductApi,
+} from '../../services/productService';
 
 function ProductManagement() {
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -12,11 +21,32 @@ function ProductManagement() {
     name: '',
     price: '',
     originalPrice: '',
-    category: '',
+    categoryId: '',
     description: '',
     image: '',
     images: [],
   });
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const [productsRes, categoryRes] = await Promise.all([
+        fetchProducts({ limit: 200 }),
+        fetchCategories(),
+      ]);
+      setProducts(productsRes.products || []);
+      setCategories(categoryRes || []);
+    } catch (fetchError) {
+      setError(fetchError?.response?.data?.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -24,13 +54,21 @@ function ProductManagement() {
 
   const handleAddProduct = () => {
     setEditingProduct(null);
-    setFormData({ name: '', price: '', originalPrice: '', category: '', description: '', image: '', images: [] });
+    setFormData({ name: '', price: '', originalPrice: '', categoryId: '', description: '', image: '', images: [] });
     setShowModal(true);
   };
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
-    setFormData({...product});
+    setFormData({
+      name: product.name,
+      price: String(product.price || ''),
+      originalPrice: product.originalPrice ? String(product.originalPrice) : '',
+      categoryId: product.categoryId || '',
+      description: product.description || '',
+      image: '',
+      images: product.images || [],
+    });
     setShowModal(true);
   };
 
@@ -67,31 +105,45 @@ function ProductManagement() {
     });
   };
 
-  const handleSaveProduct = () => {
-    if (!formData.name || !formData.price || formData.images.length === 0) {
+  const handleSaveProduct = async () => {
+    if (!formData.name || !formData.price || !formData.categoryId || formData.images.length === 0) {
       alert('Please fill in all fields and add at least one image');
       return;
     }
 
-    const productData = {
-      ...formData,
-      price: parseFloat(formData.price),
-      originalPrice: parseFloat(formData.originalPrice) || parseFloat(formData.price),
-      image: formData.images[0],
-      images: formData.images.length > 0 ? formData.images : [formData.images[0]]
+    const enteredPrice = parseFloat(formData.price);
+    const enteredOriginal = parseFloat(formData.originalPrice || 0);
+
+    const payload = {
+      title: formData.name,
+      price: enteredOriginal > enteredPrice ? enteredOriginal : enteredPrice,
+      discountPrice: enteredOriginal > enteredPrice ? enteredPrice : 0,
+      category: formData.categoryId,
+      description: formData.description,
+      images: formData.images,
     };
 
-    if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? { ...productData, id: p.id } : p));
-    } else {
-      setProducts([...products, { ...productData, id: Math.max(...products.map(p => p.id), 0) + 1 }]);
+    try {
+      if (editingProduct) {
+        await updateProductApi(editingProduct.id, payload);
+      } else {
+        await createProductApi(payload);
+      }
+      await loadData();
+      setShowModal(false);
+    } catch (saveError) {
+      alert(saveError?.response?.data?.message || 'Failed to save product');
     }
-    setShowModal(false);
   };
 
-  const handleDeleteProduct = (id) => {
+  const handleDeleteProduct = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
+      try {
+        await deleteProductApi(id);
+        await loadData();
+      } catch (deleteError) {
+        alert(deleteError?.response?.data?.message || 'Failed to delete product');
+      }
     }
   };
 
@@ -135,7 +187,15 @@ function ProductManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map(product => (
+                {loading ? (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={6}>Loading products...</td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-rose-600" colSpan={6}>{error}</td>
+                  </tr>
+                ) : filteredProducts.map(product => (
               <tr key={product.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                 <td className="px-6 py-4 text-sm">
                   {product.image && (
@@ -143,7 +203,7 @@ function ProductManagement() {
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm font-medium text-slate-800">{product.name}</td>
-                <td className="px-6 py-4 text-sm text-slate-600">{product.category}</td>
+                <td className="px-6 py-4 text-sm text-slate-600">{product.category || 'Uncategorized'}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-slate-900">₹{product.price.toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm">
                   <span className="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold">
@@ -201,13 +261,18 @@ function ProductManagement() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
-              <input
-                type="text"
-                placeholder="Category"
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
+              <select
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
               <textarea
                 placeholder="Description"
                 value={formData.description}

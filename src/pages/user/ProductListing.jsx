@@ -1,19 +1,33 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import ProductCard from '../../components/ProductCard';
-import { mockProducts, mockCategories } from '../../utils/mockData';
 import { FiFilter, FiX } from 'react-icons/fi';
+import { fetchCategories, fetchProducts } from '../../services/productService';
+
+const SORT_BY_MAP = {
+  newest: 'newest',
+  'price-low': 'priceAsc',
+  'price-high': 'priceDesc',
+  rating: 'rating',
+  popular: 'rating',
+};
 
 function ProductListing() {
-  const products = mockProducts;
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  const [searchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'all';
+
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    category: 'all',
+    category: initialCategory,
     minPrice: 0,
-    maxPrice: 1000,
+    maxPrice: 100000,
     rating: 0,
   });
 
@@ -21,45 +35,37 @@ function ProductListing() {
     setFilters({ ...filters, category });
   };
 
-  const applyFilters = useCallback(() => {
-    let filtered = [...products];
+  const applyFilters = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
 
-    // Category filter
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(p => p.category.toLowerCase() === filters.category.toLowerCase());
+      const [productsResponse, categoryList] = await Promise.all([
+        fetchProducts({
+          category: filters.category !== 'all' ? filters.category : undefined,
+          minPrice: filters.minPrice,
+          maxPrice: filters.maxPrice,
+          sortBy: SORT_BY_MAP[sortBy] || 'newest',
+          limit: 100,
+        }),
+        fetchCategories(),
+      ]);
+
+      let filtered = productsResponse.products;
+
+      if (filters.rating > 0) {
+        filtered = filtered.filter(p => p.rating >= filters.rating);
+      }
+
+      setProducts(filtered);
+      setCategories(categoryList);
+    } catch (fetchError) {
+      setError(fetchError?.response?.data?.message || 'Failed to load products');
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
-
-    // Price filter
-    filtered = filtered.filter(p => p.price >= filters.minPrice && p.price <= filters.maxPrice);
-
-    // Rating filter
-    if (filters.rating > 0) {
-      filtered = filtered.filter(p => p.rating >= filters.rating);
-    }
-
-    // Sorting
-    switch (sortBy) {
-      case 'newest':
-        filtered.sort((a, b) => b.id - a.id);
-        break;
-      case 'price-low':
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'popular':
-        filtered.sort((a, b) => b.reviews - a.reviews);
-        break;
-      default:
-        break;
-    }
-
-    setFilteredProducts(filtered);
-  }, [filters, products, sortBy]);
+  }, [filters, sortBy]);
 
   useEffect(() => {
     applyFilters();
@@ -73,7 +79,7 @@ function ProductListing() {
       <section className="bg-white shadow-soft py-8 px-4">
         <div className="container mx-auto">
           <h1 className="text-4xl font-bold mb-2">Products</h1>
-          <p className="text-gray-600">Showing {filteredProducts.length} products</p>
+          <p className="text-gray-600">Showing {products.length} products</p>
         </div>
       </section>
 
@@ -104,7 +110,7 @@ function ProductListing() {
                     />
                     <span className="text-gray-700">All Categories</span>
                   </label>
-                  {mockCategories.map(category => (
+                  {categories.map(category => (
                     <label key={category.id} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -129,7 +135,7 @@ function ProductListing() {
                     { label: '$50 - $150', min: 50, max: 150 },
                     { label: '$150 - $300', min: 150, max: 300 },
                     { label: '$300 - $500', min: 300, max: 500 },
-                    { label: 'Above $500', min: 500, max: 1000 },
+                    { label: 'Above $500', min: 500, max: 100000 },
                   ].map((range, idx) => (
                     <label key={idx} className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -200,9 +206,17 @@ function ProductListing() {
             </div>
 
             {/* Products Grid */}
-            {filteredProducts.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-lg">Loading products...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600 text-lg">{error}</p>
+              </div>
+            ) : products.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map(product => (
+                {products.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>

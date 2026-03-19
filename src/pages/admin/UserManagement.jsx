@@ -1,19 +1,47 @@
 import React, { useState } from 'react';
-import { mockUsers } from '../../utils/mockData';
 import { FiTrash2, FiSearch } from 'react-icons/fi';
 import AdminLayout from '../../components/AdminLayout';
+import { deleteUserApi, fetchUsersApi } from '../../services/userService';
 
 function UserManagement() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  React.useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const userList = await fetchUsersApi();
+        setUsers(userList);
+      } catch (fetchError) {
+        setError(fetchError?.response?.data?.message || 'Failed to load users');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
 
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDeleteUser = (id) => {
-    setUsers(users.filter(u => u.id !== id));
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) {
+      return;
+    }
+
+    try {
+      await deleteUserApi(id);
+      setUsers(prev => prev.filter(u => u.id !== id));
+    } catch (deleteError) {
+      alert(deleteError?.response?.data?.message || 'Failed to delete user');
+    }
   };
 
   return (
@@ -63,7 +91,15 @@ function UserManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map(user => (
+                {loading ? (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={6}>Loading users...</td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td className="px-6 py-8 text-center text-rose-600" colSpan={6}>{error}</td>
+                  </tr>
+                ) : filteredUsers.map(user => (
               <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                 <td className="px-6 py-4 text-sm font-medium text-slate-900">{user.name}</td>
                 <td className="px-6 py-4 text-sm text-slate-600">{user.email}</td>

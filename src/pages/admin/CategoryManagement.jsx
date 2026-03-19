@@ -1,14 +1,46 @@
-import React, { useState } from 'react';
-import { mockCategories } from '../../utils/mockData';
+import React, { useEffect, useState } from 'react';
 import { FiEdit2, FiTrash2, FiPlus, FiSearch } from 'react-icons/fi';
 import AdminLayout from '../../components/AdminLayout';
+import {
+  createCategoryApi,
+  deleteCategoryApi,
+  fetchCategories,
+  updateCategoryApi,
+} from '../../services/productService';
+
+const slugify = (value) =>
+  String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 
 function CategoryManagement() {
-  const [categories, setCategories] = useState(mockCategories);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({ name: '', slug: '', icon: '' });
+
+  const loadCategories = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await fetchCategories();
+      setCategories(data);
+    } catch (fetchError) {
+      setError(fetchError?.response?.data?.message || 'Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   const filteredCategories = categories.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -20,17 +52,41 @@ function CategoryManagement() {
     setShowModal(true);
   };
 
-  const handleSaveCategory = () => {
-    if (editingCategory) {
-      setCategories(categories.map(c => c.id === editingCategory.id ? { ...formData, id: c.id } : c));
-    } else {
-      setCategories([...categories, { ...formData, id: Math.max(...categories.map(c => c.id)) + 1 }]);
+  const handleSaveCategory = async () => {
+    if (!formData.name) {
+      alert('Category name is required');
+      return;
     }
-    setShowModal(false);
+
+    try {
+      if (editingCategory) {
+        await updateCategoryApi(editingCategory.id, {
+          name: formData.name,
+        });
+      } else {
+        await createCategoryApi({
+          name: formData.name,
+          description: '',
+        });
+      }
+      await loadCategories();
+      setShowModal(false);
+    } catch (saveError) {
+      alert(saveError?.response?.data?.message || 'Failed to save category');
+    }
   };
 
-  const handleDeleteCategory = (id) => {
-    setCategories(categories.filter(c => c.id !== id));
+  const handleDeleteCategory = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this category?')) {
+      return;
+    }
+
+    try {
+      await deleteCategoryApi(id);
+      await loadCategories();
+    } catch (deleteError) {
+      alert(deleteError?.response?.data?.message || 'Failed to delete category');
+    }
   };
 
   return (
@@ -61,7 +117,11 @@ function CategoryManagement() {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filteredCategories.map(category => (
+            {loading ? (
+              <div className="col-span-full text-center text-slate-500 py-12">Loading categories...</div>
+            ) : error ? (
+              <div className="col-span-full text-center text-rose-600 py-12">{error}</div>
+            ) : filteredCategories.map(category => (
           <div key={category.id} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
                 <div className="text-4xl mb-3">{category.icon}</div>
             <h3 className="text-lg font-bold mb-1 text-slate-900">{category.name}</h3>
@@ -100,7 +160,13 @@ function CategoryManagement() {
                 type="text"
                 placeholder="Category Name"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    name: e.target.value,
+                    slug: slugify(e.target.value),
+                  })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <input

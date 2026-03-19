@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { mockProducts } from '../../utils/mockData';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { FiHeart, FiShoppingCart, FiShare2, FiCheck } from 'react-icons/fi';
+import { fetchProductById } from '../../services/productService';
 
 function ProductDetail() {
   const { id } = useParams();
-  const product = mockProducts.find(p => p.id === parseInt(id));
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -17,12 +19,45 @@ function ProductDetail() {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist } = useWishlist();
 
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await fetchProductById(id);
+        setProduct(data);
+      } catch (fetchError) {
+        setError(fetchError?.response?.data?.message || 'Failed to load product');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [id]);
+
+  useEffect(() => {
+    setSelectedImage(0);
+  }, [product?.id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-xl text-gray-600">Loading product...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="min-h-screen">
         <Navbar />
         <div className="container mx-auto px-4 py-12 text-center">
-          <p className="text-xl text-gray-600">Product not found</p>
+          <p className="text-xl text-gray-600">{error || 'Product not found'}</p>
         </div>
         <Footer />
       </div>
@@ -111,7 +146,9 @@ function ProductDetail() {
                     </span>
                   )}
                 </div>
-                <p className="text-green-600 font-semibold">You save ₹{(product.originalPrice - product.price).toFixed(2)}</p>
+                {product.originalPrice && (
+                  <p className="text-green-600 font-semibold">You save ₹{(product.originalPrice - product.price).toFixed(2)}</p>
+                )}
               </div>
 
               {/* Description */}
@@ -121,7 +158,7 @@ function ProductDetail() {
               <div className="mb-6">
                 <h3 className="font-semibold mb-3">Key Features:</h3>
                 <ul className="space-y-2">
-                  {product.details.map((detail, idx) => (
+                  {(product.details || []).map((detail, idx) => (
                     <li key={idx} className="flex items-center gap-2 text-gray-700">
                       <FiCheck className="text-green-500" />
                       {detail}

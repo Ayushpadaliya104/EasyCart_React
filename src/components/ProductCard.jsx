@@ -11,6 +11,10 @@ function ProductCard({ product }) {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [isWishlisted, setIsWishlisted] = React.useState(isInWishlist(product.id));
 
+  React.useEffect(() => {
+    setIsWishlisted(isInWishlist(product.id));
+  }, [isInWishlist, product.id]);
+
   const handleWishlist = (e) => {
     e.preventDefault();
     if (!user) {

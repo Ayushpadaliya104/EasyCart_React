@@ -39,7 +39,7 @@ function Register() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate
@@ -67,20 +67,18 @@ function Register() {
     }
 
     setIsLoading(true);
+    const result = await register(formData.email, formData.password, formData.name);
+    setIsLoading(false);
+
+    if (!result.success) {
+      setErrors({ email: result.message });
+      return;
+    }
+
+    setSuccessMessage('Registration successful! Redirecting to login...');
     setTimeout(() => {
-      const result = register(formData.email, formData.password, formData.name);
-      setIsLoading(false);
-
-      if (!result.success) {
-        setErrors({ email: result.message });
-        return;
-      }
-
-      setSuccessMessage('Registration successful! Redirecting to login...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 1200);
-    }, 500);
+      navigate('/login');
+    }, 1200);
   };
 
   return (

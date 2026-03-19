@@ -1,100 +1,93 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getMeApi, loginApi, registerApi } from '../services/authService';
 
 const AuthContext = createContext();
-const ADMIN_CREDENTIALS = {
-  email: 'admin@easycart.com',
-  password: 'Admin@123',
-  name: 'Admin'
-};
+const AUTH_TOKEN_KEY =
+  process.env.REACT_APP_AUTH_TOKEN_KEY || 'easycart_auth_token';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+    const restoreSession = async () => {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const savedUser = localStorage.getItem('user');
 
-  const login = (email, password) => {
-    setIsLoading(true);
+      if (!token || !savedUser) {
+        setIsLoading(false);
+        return;
+      }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-
-    if (
-      normalizedEmail === ADMIN_CREDENTIALS.email &&
-      password === ADMIN_CREDENTIALS.password
-    ) {
-      const adminUser = {
-        id: 'admin-user',
-        email: ADMIN_CREDENTIALS.email,
-        role: 'admin',
-        name: ADMIN_CREDENTIALS.name,
-        createdAt: new Date().toISOString()
-      };
-      setUser(adminUser);
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      setIsLoading(false);
-      return { success: true, user: adminUser };
-    }
-
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const matchedUser = registeredUsers.find(
-      (item) => String(item.email).trim().toLowerCase() === normalizedEmail && item.password === password
-    );
-
-    if (!matchedUser) {
-      setIsLoading(false);
-      return { success: false, message: 'Invalid email or password' };
-    }
-
-    const userData = {
-      id: matchedUser.id,
-      email: matchedUser.email,
-      role: matchedUser.role || 'user',
-      name: matchedUser.name || matchedUser.email.split('@')[0],
-      createdAt: matchedUser.createdAt || new Date().toISOString()
+      try {
+        const response = await getMeApi();
+        setUser(response.user);
+        localStorage.setItem('user', JSON.stringify(response.user));
+      } catch (_error) {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setIsLoading(false);
-    return { success: true, user: userData };
+    restoreSession();
+  }, []);
+
+  const login = async (email, password) => {
+    setIsLoading(true);
+
+    try {
+      const response = await loginApi({ email, password });
+      localStorage.setItem(AUTH_TOKEN_KEY, response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      setUser(response.user);
+      return { success: true, user: response.user };
+    } catch (error) {
+      let message = error?.response?.data?.message;
+
+      if (!message && !error?.response) {
+        message = 'Unable to connect to server. Please start backend server on port 5000.';
+      }
+
+      if (!message) {
+        message = 'Invalid email or password';
+      }
+
+      return { success: false, message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem('user');
   };
 
-  const register = (email, password, name) => {
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const normalizedEmail = String(email).trim().toLowerCase();
+  const register = async (email, password, name) => {
+    setIsLoading(true);
 
-    const alreadyExists = registeredUsers.some(
-      (item) => String(item.email).trim().toLowerCase() === normalizedEmail
-    );
+    try {
+      await registerApi({ name, email, password });
+      return { success: true };
+    } catch (error) {
+      let message = error?.response?.data?.message;
 
-    if (alreadyExists) {
-      return { success: false, message: 'This email is already registered' };
-    }
-
-    const nextUsers = [
-      ...registeredUsers,
-      {
-        id: Math.random().toString(36).substr(2, 9),
-        email: normalizedEmail,
-        name,
-        password,
-        role: 'user',
-        createdAt: new Date().toISOString()
+      if (!message && !error?.response) {
+        message = 'Unable to connect to server. Please start backend server on port 5000.';
       }
-    ];
 
-    localStorage.setItem('registeredUsers', JSON.stringify(nextUsers));
-    return { success: true };
+      if (!message) {
+        message = 'Registration failed';
+      }
+
+      return { success: false, message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

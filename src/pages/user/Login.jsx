@@ -35,7 +35,7 @@ function Login() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate
@@ -53,20 +53,18 @@ function Login() {
     }
 
     setIsLoading(true);
+    const result = await login(formData.email, formData.password);
+    setIsLoading(false);
+
+    if (!result.success) {
+      setErrors({ password: result.message });
+      return;
+    }
+
+    setSuccessMessage(`Welcome ${result.user.name}, successfully logged in.`);
     setTimeout(() => {
-      const result = login(formData.email, formData.password);
-      setIsLoading(false);
-
-      if (!result.success) {
-        setErrors({ password: result.message });
-        return;
-      }
-
-      setSuccessMessage(`Welcome ${result.user.name}, successfully logged in.`);
-      setTimeout(() => {
-        navigate(result.user.role === 'admin' ? '/admin' : '/');
-      }, 1200);
-    }, 500);
+      navigate(result.user.role === 'admin' ? '/admin' : '/');
+    }, 1200);
   };
 
   return (
@@ -188,8 +186,8 @@ function Login() {
           {/* Info Box */}
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
             <p className="font-semibold mb-1">Demo Credentials</p>
-            <p>Email: demo@example.com</p>
-            <p>Password: password123</p>
+            <p>Email: user@example.com</p>
+            <p>Password: 123456</p>
             <p className="mt-2 font-semibold">Admin Credentials</p>
             <p>Email: admin@easycart.com</p>
             <p>Password: Admin@123</p>
