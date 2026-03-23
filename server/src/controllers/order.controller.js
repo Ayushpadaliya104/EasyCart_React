@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const StoreSettings = require('../models/StoreSettings');
 
 const buildOrderResponse = (orderDoc) => ({
   id: orderDoc._id,
@@ -92,7 +93,9 @@ const createOrder = async (req, res, next) => {
     }
 
     const subtotal = mappedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const tax = Number((subtotal * 0.08).toFixed(2));
+    const storeSettings = await StoreSettings.findOne({ key: 'default' }).select('taxRate');
+    const taxRate = Number(storeSettings?.taxRate ?? 8);
+    const tax = Number((subtotal * (taxRate / 100)).toFixed(2));
     const shippingCharge = 0;
     const total = Number((subtotal + tax + shippingCharge).toFixed(2));
 

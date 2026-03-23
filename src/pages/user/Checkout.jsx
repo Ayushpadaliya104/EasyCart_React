@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import { useStoreSettings } from '../../context/StoreSettingsContext';
 import { validateField } from '../../utils/validators';
 import { FiArrowRight } from 'react-icons/fi';
 import { createOrderApi } from '../../services/orderService';
@@ -12,6 +13,7 @@ function Checkout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { cartItems, getTotalPrice, clearCart } = useCart();
+  const { settings } = useStoreSettings();
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Review
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [errors, setErrors] = useState({});
@@ -31,6 +33,9 @@ function Checkout() {
     cardExpiry: '',
     cardCVV: '',
   });
+
+  const taxAmount = Number((getTotalPrice() * (Number(settings.taxRate || 0) / 100)).toFixed(2));
+  const finalTotal = Number((getTotalPrice() + taxAmount).toFixed(2));
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -438,7 +443,7 @@ function Checkout() {
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Tax</span>
-                    <span>₹{(getTotalPrice() * 0.08).toFixed(2)}</span>
+                    <span>₹{taxAmount.toFixed(2)} ({Number(settings.taxRate || 0)}%)</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
@@ -448,7 +453,7 @@ function Checkout() {
 
                 <div className="flex justify-between text-xl font-bold">
                   <span>Total</span>
-                  <span className="text-primary">₹{(getTotalPrice() * 1.08).toFixed(2)}</span>
+                  <span className="text-primary">₹{finalTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>

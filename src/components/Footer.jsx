@@ -2,9 +2,11 @@ import React from 'react';
 import { FiFacebook, FiTwitter, FiInstagram, FiLinkedin } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useStoreSettings } from '../context/StoreSettingsContext';
 
 function Footer() {
   const { user } = useAuth();
+  const { settings } = useStoreSettings();
 
   const handleProtectedLink = (e, path) => {
     if (!user) {
@@ -20,10 +22,13 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* About */}
           <div>
-            <h3 className="gradient-text text-xl font-bold mb-4">EasyCart</h3>
+            <h3 className="gradient-text text-xl font-bold mb-4">{settings.storeName}</h3>
             <p className="text-slate-400 text-sm">
               Premium e-commerce platform offering the best products at unbeatable prices.
             </p>
+            <p className="text-slate-400 text-sm mt-3">{settings.address}</p>
+            <p className="text-slate-400 text-sm mt-1">{settings.email}</p>
+            <p className="text-slate-400 text-sm mt-1">{settings.phone}</p>
           </div>
 
           {/* Quick Links */}
@@ -63,7 +68,7 @@ function Footer() {
         {/* Bottom */}
         <div className="border-t border-slate-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center text-slate-400 text-sm">
-            <p>&copy; 2024 EasyCart. All rights reserved.</p>
+            <p>&copy; 2024 {settings.storeName}. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <Link to="/" className="hover:text-white transition">Privacy Policy</Link>
               <Link to="/" className="hover:text-white transition">Terms of Service</Link>

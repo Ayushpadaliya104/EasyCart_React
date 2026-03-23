@@ -5,11 +5,13 @@ import Footer from '../../components/Footer';
 import { FiArrowLeft, FiTruck, FiMapPin, FiPhone, FiMail } from 'react-icons/fi';
 import { fetchOrderByIdApi } from '../../services/orderService';
 import { useAuth } from '../../context/AuthContext';
+import { useStoreSettings } from '../../context/StoreSettingsContext';
 
 function OrderTracking() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings } = useStoreSettings();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -177,14 +179,14 @@ function OrderTracking() {
                   <FiPhone className="text-primary mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-gray-600 text-sm">Customer Support</p>
-                    <p className="font-semibold">1-800-EASYCART</p>
+                    <p className="font-semibold">{settings.phone}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <FiMail className="text-primary mt-1 flex-shrink-0" />
                   <div>
                     <p className="text-gray-600 text-sm">Email Support</p>
-                    <p className="font-semibold">support@easycart.com</p>
+                    <p className="font-semibold">{settings.email}</p>
                   </div>
                 </div>
               </div>

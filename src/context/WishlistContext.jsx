@@ -5,6 +5,56 @@ const WishlistContext = createContext();
 
 const WISHLIST_GUEST_KEY = 'wishlist';
 
+const readWishlistFromStorage = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn(`Unable to read wishlist from localStorage key: ${key}`, error);
+    return [];
+  }
+};
+
+const compactWishlistProduct = (product = {}) => ({
+  id: product.id,
+  name: product.name,
+  title: product.title,
+  price: product.price,
+  originalPrice: product.originalPrice,
+  image: product.image,
+  images: Array.isArray(product.images) ? product.images.slice(0, 2) : undefined,
+  category: product.category,
+  rating: product.rating,
+  stock: product.stock,
+});
+
+const writeWishlistToStorage = (key, items) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+    return true;
+  } catch (error) {
+    if (error?.name === 'QuotaExceededError') {
+      // Retry once with a more compact payload to prevent app crash.
+      try {
+        const compactItems = items.map(compactWishlistProduct);
+        localStorage.setItem(key, JSON.stringify(compactItems));
+        return true;
+      } catch (retryError) {
+        console.warn(`Wishlist storage quota exceeded for key: ${key}`, retryError);
+        return false;
+      }
+    }
+
+    console.warn(`Unable to save wishlist to localStorage key: ${key}`, error);
+    return false;
+  }
+};
+
 const getWishlistStorageKey = (user) => {
   const email = String(user?.email || '').trim().toLowerCase();
   if (!email) {
@@ -16,19 +66,17 @@ const getWishlistStorageKey = (user) => {
 export function WishlistProvider({ children }) {
   const { user } = useAuth();
   const [wishlistItems, setWishlistItems] = useState(() => {
-    const saved = localStorage.getItem(WISHLIST_GUEST_KEY);
-    return saved ? JSON.parse(saved) : [];
+    return readWishlistFromStorage(WISHLIST_GUEST_KEY);
   });
 
   useEffect(() => {
     const key = getWishlistStorageKey(user);
-    const saved = localStorage.getItem(key);
-    setWishlistItems(saved ? JSON.parse(saved) : []);
+    setWishlistItems(readWishlistFromStorage(key));
   }, [user]);
 
   useEffect(() => {
     const key = getWishlistStorageKey(user);
-    localStorage.setItem(key, JSON.stringify(wishlistItems));
+    writeWishlistToStorage(key, wishlistItems);
   }, [wishlistItems, user]);
 
   const addToWishlist = (product) => {
@@ -37,7 +85,7 @@ export function WishlistProvider({ children }) {
       if (exists) {
         return prevItems;
       }
-      return [...prevItems, product];
+      return [...prevItems, compactWishlistProduct(product)];
     });
   };
 

@@ -3,10 +3,14 @@ import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
+import { useStoreSettings } from '../../context/StoreSettingsContext';
 import { FiTrash2, FiArrowRight, FiMinus, FiPlus } from 'react-icons/fi';
 
 function Cart() {
   const { cartItems, removeFromCart, updateQuantity, getTotalPrice, getTotalItems } = useCart();
+  const { settings } = useStoreSettings();
+  const taxAmount = Number((getTotalPrice() * (Number(settings.taxRate || 0) / 100)).toFixed(2));
+  const finalTotal = Number((getTotalPrice() + taxAmount).toFixed(2));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,13 +102,13 @@ function Cart() {
                     </div>
                     <div className="flex justify-between text-gray-700">
                       <span>Tax</span>
-                      <span>₹{(getTotalPrice() * 0.08).toFixed(2)}</span>
+                      <span>₹{taxAmount.toFixed(2)} ({Number(settings.taxRate || 0)}%)</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between text-xl font-bold mb-6">
                     <span>Total</span>
-                    <span className="text-primary">₹{(getTotalPrice() * 1.08).toFixed(2)}</span>
+                    <span className="text-primary">₹{finalTotal.toFixed(2)}</span>
                   </div>
 
                   <Link

@@ -52,7 +52,7 @@ function AdminLayout({ title, subtitle, activePath, actions, children }) {
         </button>
       </div>
 
-      <div className="mx-auto max-w-[1400px] lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:px-6 lg:py-6">
+      <div className="w-full lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-4 xl:gap-5 lg:px-4 xl:px-5 2xl:px-6 lg:py-4">
         <aside
           className={`${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'

@@ -4,6 +4,7 @@ import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { QueryProvider } from './context/QueryContext';
+import { StoreSettingsProvider } from './context/StoreSettingsContext';
 
 // User Pages
 import Homepage from './pages/user/Homepage';
@@ -45,8 +46,9 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            <QueryProvider>
-              <Routes>
+            <StoreSettingsProvider>
+              <QueryProvider>
+                <Routes>
                 {/* User Routes */}
                 <Route path="/" element={<Homepage />} />
                 <Route path="/products" element={<ProductListing />} />
@@ -73,8 +75,9 @@ function App() {
 
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </QueryProvider>
+                </Routes>
+              </QueryProvider>
+            </StoreSettingsProvider>
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>
