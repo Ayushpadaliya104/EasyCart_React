@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getMeApi, loginApi, registerApi } from '../services/authService';
+import { getMeApi, loginApi, registerApi, updateMeApi } from '../services/authService';
 
 const AuthContext = createContext();
 const AUTH_TOKEN_KEY =
@@ -90,13 +90,28 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateUser = async (payload) => {
+    try {
+      const response = await updateMeApi(payload);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      setUser(response.user);
+      return { success: true, user: response.user };
+    } catch (error) {
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Failed to update profile'
+      };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
       isLoading,
       login,
       logout,
-      register
+      register,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

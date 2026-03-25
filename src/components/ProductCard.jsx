@@ -30,14 +30,14 @@ function ProductCard({ product }) {
   };
 
   return (
-    <Link to={`/product/${product.id}`}>
-      <div className="product-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm h-full">
+    <Link to={`/product/${product.id}`} className="block h-full group">
+      <div className="product-card bg-gradient-to-b from-white to-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-sm h-full transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl group-hover:border-blue-200">
         {/* Image Container */}
-        <div className="relative bg-slate-100 aspect-square overflow-hidden">
+        <div className="relative bg-gradient-to-br from-slate-100 to-slate-200 aspect-square overflow-hidden">
           <img
             src={product.image || 'https://via.placeholder.com/300'}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition"
+            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
           />
           
           {/* Badge */}
@@ -107,9 +107,9 @@ function ProductCard({ product }) {
               addToCart(product);
             }}
             disabled={!user}
-            className={`w-full py-2 rounded-xl transition flex items-center justify-center gap-2 btn-hover-lift ${
+            className={`w-full py-2.5 rounded-xl transition flex items-center justify-center gap-2 btn-hover-lift font-semibold ${
               user
-                ? 'bg-slate-900 text-white hover:bg-slate-700 cursor-pointer'
+                ? 'bg-slate-900 text-white hover:bg-slate-700 cursor-pointer shadow-md hover:shadow-lg'
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed'
             }`}
           >

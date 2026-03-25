@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -8,6 +8,67 @@ import { useStoreSettings } from '../../context/StoreSettingsContext';
 import { validateField } from '../../utils/validators';
 import { FiArrowRight } from 'react-icons/fi';
 import { createOrderApi } from '../../services/orderService';
+import { createRazorpayOrderApi, verifyRazorpayPaymentApi } from '../../services/paymentService';
+
+const splitName = (name = '') => {
+  const trimmedName = String(name).trim();
+
+  if (!trimmedName) {
+    return { firstName: '', lastName: '' };
+  }
+
+  const [firstName, ...rest] = trimmedName.split(/\s+/);
+  return {
+    firstName,
+    lastName: rest.join(' ')
+  };
+};
+
+const getPrefilledShippingData = (user) => {
+  const nameParts = splitName(user?.name || '');
+  const savedAddress = user?.defaultShippingAddress || {};
+
+  return {
+    firstName: savedAddress.firstName || nameParts.firstName || '',
+    lastName: savedAddress.lastName || nameParts.lastName || '',
+    email: savedAddress.email || user?.email || '',
+    phone: savedAddress.phone || user?.phone || '',
+    address: savedAddress.address || user?.address || '',
+    city: savedAddress.city || '',
+    state: savedAddress.state || '',
+    zipcode: savedAddress.zipcode || ''
+  };
+};
+
+const loadRazorpayScript = () => {
+  if (window.Razorpay) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+const runMockGatewayFlow = async () => {
+  const approved = window.confirm(
+    'Fake Razorpay Payment\n\nPress OK to simulate successful payment.\nPress Cancel to simulate failed/cancelled payment.'
+  );
+
+  if (!approved) {
+    throw new Error('Mock payment cancelled by user');
+  }
+
+  return {
+    razorpay_payment_id: `pay_mock_${Date.now()}`,
+    razorpay_signature: 'mock_signature'
+  };
+};
 
 function Checkout() {
   const navigate = useNavigate();
@@ -19,20 +80,23 @@ function Checkout() {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const prefilledShipping = getPrefilledShippingData(user);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipcode: '',
+    ...prefilledShipping,
     cardNumber: '',
     cardName: '',
     cardExpiry: '',
     cardCVV: '',
   });
+
+  useEffect(() => {
+    const shippingFromProfile = getPrefilledShippingData(user);
+    setFormData((prev) => ({
+      ...prev,
+      ...shippingFromProfile
+    }));
+  }, [user]);
 
   const taxAmount = Number((getTotalPrice() * (Number(settings.taxRate || 0) / 100)).toFixed(2));
   const finalTotal = Number((getTotalPrice() + taxAmount).toFixed(2));
@@ -55,9 +119,13 @@ function Checkout() {
   };
 
   const validateStep = () => {
-    const fieldsToValidate = step === 1
-      ? ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipcode']
-      : ['cardNumber', 'cardName', 'cardExpiry', 'cardCVV'];
+    let fieldsToValidate = [];
+
+    if (step === 1) {
+      fieldsToValidate = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipcode'];
+    } else if (step === 2 && paymentMethod === 'card') {
+      fieldsToValidate = ['cardNumber', 'cardName', 'cardExpiry', 'cardCVV'];
+    }
 
     let newErrors = {};
     fieldsToValidate.forEach(field => {
@@ -73,9 +141,86 @@ function Checkout() {
 
   const handleNextStep = () => {
     setApiError('');
+    setPaymentStatus('');
     if (validateStep()) {
       setStep(step + 1);
     }
+  };
+
+  const handleRazorpayPayment = async () => {
+    setPaymentStatus('Creating Razorpay test order...');
+
+    const paymentOrderResponse = await createRazorpayOrderApi({
+      items: cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity
+      }))
+    });
+
+    if (paymentOrderResponse.mockMode) {
+      setPaymentStatus('Opening fake Razorpay gateway...');
+      const mockPayment = await runMockGatewayFlow();
+
+      setPaymentStatus('Verifying mock payment...');
+
+      await verifyRazorpayPaymentApi({
+        razorpay_order_id: paymentOrderResponse.order.id,
+        ...mockPayment
+      });
+
+      setPaymentStatus('Mock payment verified.');
+      return;
+    }
+
+    const scriptLoaded = await loadRazorpayScript();
+
+    if (!scriptLoaded || !window.Razorpay) {
+      throw new Error('Unable to load Razorpay checkout. Please check your internet connection and try again.');
+    }
+
+    setPaymentStatus('Opening Razorpay popup...');
+
+    const paymentResult = await new Promise((resolve, reject) => {
+      const rzp = new window.Razorpay({
+        key: paymentOrderResponse.keyId,
+        amount: paymentOrderResponse.order.amount,
+        currency: paymentOrderResponse.order.currency,
+        name: settings.storeName || 'EasyCart',
+        description: 'EasyCart Test Payment',
+        order_id: paymentOrderResponse.order.id,
+        handler: (response) => {
+          resolve(response);
+        },
+        prefill: {
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          email: formData.email,
+          contact: formData.phone
+        },
+        notes: {
+          mode: 'test'
+        },
+        theme: {
+          color: '#0f172a'
+        },
+        modal: {
+          ondismiss: () => {
+            reject(new Error('Razorpay checkout closed by user'));
+          }
+        }
+      });
+
+      rzp.on('payment.failed', () => {
+        reject(new Error('Razorpay test payment failed'));
+      });
+
+      rzp.open();
+    });
+
+    setPaymentStatus('Verifying Razorpay payment...');
+
+    await verifyRazorpayPaymentApi(paymentResult);
+
+    setPaymentStatus('Razorpay test payment verified.');
   };
 
   const handlePlaceOrder = async () => {
@@ -88,6 +233,11 @@ function Checkout() {
     try {
       setIsSubmitting(true);
       setApiError('');
+      setPaymentStatus('');
+
+      if (paymentMethod === 'razorpay') {
+        await handleRazorpayPayment();
+      }
 
       await createOrderApi({
         items: cartItems.map((item) => ({
@@ -167,6 +317,9 @@ function Checkout() {
               {step === 1 && (
                 <div className="bg-white rounded-lg shadow-soft p-8 mb-8">
                   <h2 className="text-2xl font-bold mb-6">Shipping Address</h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Profile ka default shipping address yahan auto-fill hota hai. Aap checkout ke liye isse change bhi kar sakte ho.
+                  </p>
                   
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <input
@@ -302,6 +455,17 @@ function Checkout() {
                       />
                       <span className="font-semibold">PayPal</span>
                     </label>
+
+                    <label className="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer mt-3">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="razorpay"
+                        checked={paymentMethod === 'razorpay'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      />
+                      <span className="font-semibold">Razorpay (Test Mode)</span>
+                    </label>
                   </div>
 
                   {paymentMethod === 'card' && (
@@ -357,6 +521,12 @@ function Checkout() {
                     </div>
                   )}
 
+                  {paymentMethod === 'razorpay' && (
+                    <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                      Razorpay Test Mode use ho raha hai. Test UPI/Card se payment simulate hoga aur real money debit nahi hoga.
+                    </div>
+                  )}
+
                   <div className="flex gap-4">
                     <button
                       onClick={() => setStep(1)}
@@ -399,8 +569,15 @@ function Checkout() {
                   <div className="mb-6 pb-6 border-b">
                     <h3 className="font-semibold mb-3">Payment Method:</h3>
                     <p className="text-gray-700">
-                      {paymentMethod === 'card' ? `Card ending in ${formData.cardNumber.slice(-4)}` : 'PayPal'}
+                      {paymentMethod === 'card'
+                        ? `Card ending in ${formData.cardNumber.slice(-4)}`
+                        : paymentMethod === 'razorpay'
+                          ? 'Razorpay (Test Mode)'
+                          : 'PayPal'}
                     </p>
+                    {paymentMethod === 'razorpay' && paymentStatus && (
+                      <p className="text-sm text-green-700 mt-2">{paymentStatus}</p>
+                    )}
                   </div>
 
                   <div className="flex gap-4">

@@ -6,6 +6,8 @@ import ProductCard from '../../components/ProductCard';
 import { FiFilter, FiX } from 'react-icons/fi';
 import { fetchCategories, fetchProducts } from '../../services/productService';
 
+const REVIEW_STORAGE_PREFIX = 'easycart_product_reviews_';
+
 const SORT_BY_MAP = {
   newest: 'newest',
   'price-low': 'priceAsc',
@@ -14,9 +16,42 @@ const SORT_BY_MAP = {
   popular: 'rating',
 };
 
+const mergeLocalReviewStats = (product) => {
+  const baseReviews = Number(product.reviews || 0);
+  const baseRating = Number(product.rating || 0);
+
+  try {
+    const raw = localStorage.getItem(`${REVIEW_STORAGE_PREFIX}${product.id}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const localReviews = Array.isArray(parsed) ? parsed : [];
+
+    if (localReviews.length === 0) {
+      return product;
+    }
+
+    const localRatingTotal = localReviews.reduce(
+      (total, review) => total + Number(review.rating || 0),
+      0
+    );
+    const mergedReviewCount = baseReviews + localReviews.length;
+    const mergedRating = mergedReviewCount > 0
+      ? ((baseRating * baseReviews) + localRatingTotal) / mergedReviewCount
+      : 0;
+
+    return {
+      ...product,
+      rating: Number(mergedRating.toFixed(1)),
+      reviews: mergedReviewCount,
+    };
+  } catch (_error) {
+    return product;
+  }
+};
+
 function ProductListing() {
   const [searchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
+  const searchQuery = searchParams.get('search') || '';
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -24,15 +59,36 @@ function ProductListing() {
   const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [priceLimit, setPriceLimit] = useState(1000);
   const [filters, setFilters] = useState({
-    category: initialCategory,
+    categories: initialCategory !== 'all' ? [initialCategory] : [],
     minPrice: 0,
-    maxPrice: 100000,
-    rating: 0,
+    maxPrice: null,
+    ratings: [],
   });
 
-  const handleCategoryChange = (category) => {
-    setFilters({ ...filters, category });
+  const handleCategoryToggle = (categorySlug) => {
+    setFilters(prev => {
+      const exists = prev.categories.includes(categorySlug);
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter(slug => slug !== categorySlug)
+          : [...prev.categories, categorySlug],
+      };
+    });
+  };
+
+  const handleRatingToggle = (ratingValue) => {
+    setFilters(prev => {
+      const exists = prev.ratings.includes(ratingValue);
+      return {
+        ...prev,
+        ratings: exists
+          ? prev.ratings.filter(rating => rating !== ratingValue)
+          : [...prev.ratings, ratingValue],
+      };
+    });
   };
 
   const applyFilters = useCallback(async () => {
@@ -42,19 +98,41 @@ function ProductListing() {
 
       const [productsResponse, categoryList] = await Promise.all([
         fetchProducts({
-          category: filters.category !== 'all' ? filters.category : undefined,
-          minPrice: filters.minPrice,
-          maxPrice: filters.maxPrice,
+          search: searchQuery,
           sortBy: SORT_BY_MAP[sortBy] || 'newest',
           limit: 100,
         }),
         fetchCategories(),
       ]);
 
-      let filtered = productsResponse.products;
+      const allProducts = (productsResponse.products || []).map(mergeLocalReviewStats);
+      const detectedMaxPrice = Math.max(0, ...allProducts.map(product => Number(product.price) || 0));
+      const normalizedMaxPrice = Math.max(1, Math.ceil(detectedMaxPrice));
+      const effectiveMaxPrice = filters.maxPrice == null ? normalizedMaxPrice : filters.maxPrice;
 
-      if (filters.rating > 0) {
-        filtered = filtered.filter(p => p.rating >= filters.rating);
+      setPriceLimit(normalizedMaxPrice);
+
+      let filtered = allProducts;
+
+      if (filters.categories.length > 0) {
+        filtered = filtered.filter((product) => {
+          const categorySlug = typeof product.category === 'string'
+            ? product.category
+            : product.category?.slug;
+          return filters.categories.includes(categorySlug);
+        });
+      }
+
+      filtered = filtered.filter((product) => {
+        const productPrice = Number(product.price) || 0;
+        return productPrice >= filters.minPrice && productPrice <= effectiveMaxPrice;
+      });
+
+      if (filters.ratings.length > 0) {
+        filtered = filtered.filter((product) => {
+          const roundedRating = Math.round(Number(product.rating || 0));
+          return filters.ratings.includes(roundedRating);
+        });
       }
 
       setProducts(filtered);
@@ -65,21 +143,39 @@ function ProductListing() {
     } finally {
       setLoading(false);
     }
-  }, [filters, sortBy]);
+  }, [filters, sortBy, searchQuery]);
 
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
+
+  useEffect(() => {
+    setFilters(prev => {
+      const nextMin = Math.min(prev.minPrice, priceLimit);
+      const maxCandidate = prev.maxPrice == null ? priceLimit : Math.min(prev.maxPrice, priceLimit);
+      const nextMax = Math.max(maxCandidate, nextMin);
+
+      if (nextMin === prev.minPrice && nextMax === prev.maxPrice) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        minPrice: nextMin,
+        maxPrice: nextMax,
+      };
+    });
+  }, [priceLimit]);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       {/* Page Header */}
-      <section className="bg-white shadow-soft py-8 px-4">
+      <section className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 shadow-soft py-8 px-4">
         <div className="container mx-auto">
-          <h1 className="text-4xl font-bold mb-2">Products</h1>
-          <p className="text-gray-600">Showing {products.length} products</p>
+          <h1 className="text-4xl font-extrabold text-white mb-2">Products</h1>
+          <p className="text-blue-100">Showing {products.length} products</p>
         </div>
       </section>
 
@@ -87,83 +183,102 @@ function ProductListing() {
         <div className="flex gap-8">
           {/* Filters Sidebar */}
           <div className={`${showFilters ? 'block' : 'hidden'} md:block w-full md:w-64 flex-shrink-0`}>
-            <div className="bg-white p-6 rounded-lg shadow-soft sticky top-20">
+            <div className="bg-gradient-to-b from-white via-blue-50/60 to-indigo-50/60 p-6 rounded-2xl shadow-xl border border-indigo-100 sticky top-20 backdrop-blur-sm">
               <div className="flex justify-between items-center mb-4 md:hidden">
-                <h3 className="font-bold text-lg">Filters</h3>
-                <button onClick={() => setShowFilters(false)}>
+                <h3 className="font-extrabold text-lg bg-gradient-to-r from-indigo-700 to-cyan-600 bg-clip-text text-transparent">Filters</h3>
+                <button className="p-1 rounded-full hover:bg-indigo-100" onClick={() => setShowFilters(false)}>
                   <FiX size={20} />
                 </button>
               </div>
 
               {/* Category Filter */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-800 mb-3">Category</h4>
+              <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 shadow-sm">
+                <h4 className="font-bold text-slate-800 mb-3 tracking-wide">Category</h4>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/70 transition-colors">
                     <input
-                      type="radio"
-                      name="category"
-                      value="all"
-                      checked={filters.category === 'all'}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                      className="w-4 h-4"
+                      type="checkbox"
+                      checked={filters.categories.length === 0}
+                      onChange={() => setFilters(prev => ({ ...prev, categories: [] }))}
+                      className="w-4 h-4 accent-indigo-600"
                     />
-                    <span className="text-gray-700">All Categories</span>
+                    <span className="text-indigo-800 font-semibold">All Categories</span>
                   </label>
                   {categories.map(category => (
-                    <label key={category.id} className="flex items-center gap-2 cursor-pointer">
+                    <label key={category.id} className="flex items-center gap-2 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/70 transition-colors">
                       <input
-                        type="radio"
+                        type="checkbox"
                         name="category"
                         value={category.slug}
-                        checked={filters.category === category.slug}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
-                        className="w-4 h-4"
+                        checked={filters.categories.includes(category.slug)}
+                        onChange={() => handleCategoryToggle(category.slug)}
+                        className="w-4 h-4 accent-indigo-600"
                       />
-                      <span className="text-gray-700">{category.name}</span>
+                      <span className="text-slate-700 font-semibold">{category.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               {/* Price Range Filter */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-800 mb-3">Price Range</h4>
-                <div className="space-y-2">
-                  {[
-                    { label: 'Under $50', min: 0, max: 50 },
-                    { label: '$50 - $150', min: 50, max: 150 },
-                    { label: '$150 - $300', min: 150, max: 300 },
-                    { label: '$300 - $500', min: 300, max: 500 },
-                    { label: 'Above $500', min: 500, max: 100000 },
-                  ].map((range, idx) => (
-                    <label key={idx} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="price"
-                        value={`min-${range.min},max-${range.max}`}
-                        onChange={() => setFilters({ ...filters, minPrice: range.min, maxPrice: range.max })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-gray-700">{range.label}</span>
-                    </label>
-                  ))}
+              <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-cyan-50 to-sky-50 border border-cyan-100 shadow-sm">
+                <h4 className="font-bold text-slate-800 mb-3 tracking-wide">Price Range</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-indigo-700 font-semibold mb-1">Low Price: ₹{filters.minPrice}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max={Math.max(1, priceLimit)}
+                      step="1"
+                      value={filters.minPrice}
+                      onChange={(e) => {
+                        const nextMin = Math.max(0, Number(e.target.value) || 0);
+                        setFilters(prev => {
+                          const currentMax = prev.maxPrice == null ? priceLimit : prev.maxPrice;
+                          return {
+                            ...prev,
+                            minPrice: Math.min(nextMin, currentMax),
+                          };
+                        });
+                      }}
+                      className="w-full accent-indigo-600 drop-shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-cyan-700 font-semibold mb-1">High Price: ₹{filters.maxPrice == null ? priceLimit : filters.maxPrice}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max={priceLimit}
+                      step="1"
+                      value={filters.maxPrice == null ? priceLimit : filters.maxPrice}
+                      onChange={(e) => {
+                        const nextMax = Math.max(0, Number(e.target.value) || 0);
+                        setFilters(prev => ({
+                          ...prev,
+                          maxPrice: Math.max(nextMax, prev.minPrice),
+                        }));
+                      }}
+                      className="w-full accent-cyan-600 drop-shadow-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Rating Filter */}
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-800 mb-3">Rating</h4>
+              <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 shadow-sm">
+                <h4 className="font-bold text-slate-800 mb-3 tracking-wide">Rating</h4>
                 <div className="space-y-2">
-                  {[5, 4, 3, 2, 1].map(rating => (
-                    <label key={rating} className="flex items-center gap-2 cursor-pointer">
+                  {[5, 4, 3, 2, 1, 0].map(rating => (
+                    <label key={rating} className="flex items-center gap-2 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-white/70 transition-colors">
                       <input
-                        type="radio"
+                        type="checkbox"
                         name="rating"
                         value={rating}
-                        checked={filters.rating === rating}
-                        onChange={(e) => setFilters({ ...filters, rating: parseInt(e.target.value) })}
-                        className="w-4 h-4"
+                        checked={filters.ratings.includes(rating)}
+                        onChange={() => handleRatingToggle(rating)}
+                        className="w-4 h-4 accent-amber-500"
                       />
                       <div className="flex">
                         {[...Array(5)].map((_, i) => (
@@ -172,7 +287,7 @@ function ProductListing() {
                           </span>
                         ))}
                       </div>
-                      <span className="text-gray-700">& Up</span>
+                      <span className="text-slate-700 font-semibold">{rating} Star</span>
                     </label>
                   ))}
                 </div>
@@ -183,7 +298,7 @@ function ProductListing() {
           {/* Products Grid */}
           <div className="flex-1">
             {/* Toolbar */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center justify-between md:justify-end gap-3 mb-6">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="md:hidden flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg"
@@ -195,7 +310,7 @@ function ProductListing() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-4 py-2 border-2 border-indigo-500 rounded-xl bg-gradient-to-r from-indigo-50 via-cyan-50 to-blue-100 text-slate-800 font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
               >
                 <option value="newest">Newest</option>
                 <option value="price-low">Price: Low to High</option>

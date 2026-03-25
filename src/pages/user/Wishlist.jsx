@@ -11,15 +11,22 @@ function Wishlist() {
   const { wishlistItems, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
 
+  const handleMoveAllToCart = () => {
+    wishlistItems.forEach(item => {
+      addToCart(item);
+    });
+    clearWishlist();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       {/* Header */}
-      <section className="bg-white shadow-soft py-8 px-4">
+      <section className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 shadow-soft py-8 px-4">
         <div className="container mx-auto">
-          <h1 className="text-4xl font-bold">My Wishlist</h1>
-          <p className="text-gray-600">You have {wishlistItems.length} item(s) saved</p>
+          <h1 className="text-4xl font-extrabold text-white">My Wishlist</h1>
+          <p className="text-blue-100">You have {wishlistItems.length} item(s) saved</p>
         </div>
       </section>
 
@@ -27,44 +34,37 @@ function Wishlist() {
         <section className="py-12 px-4">
           <div className="container mx-auto">
             {/* Top Actions */}
-            <div className="mb-8 flex justify-between items-center">
+            <div className="mb-8 flex justify-between items-center gap-4">
               <p className="text-gray-600">
                 {wishlistItems.length} item{wishlistItems.length !== 1 ? 's' : ''} in your wishlist
               </p>
-              <button
-                onClick={clearWishlist}
-                className="text-red-500 hover:text-red-600 font-semibold flex items-center gap-1"
-              >
-                <FiTrash2 size={18} />
-                Clear All
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleMoveAllToCart}
+                  className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg font-semibold hover:bg-slate-700 transition"
+                >
+                  <FiShoppingCart />
+                  Move All to Cart
+                </button>
+                <button
+                  onClick={clearWishlist}
+                  className="text-red-500 hover:text-red-600 font-semibold flex items-center gap-1"
+                >
+                  <FiTrash2 size={18} />
+                  Clear All
+                </button>
+              </div>
             </div>
 
             {/* Products Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 justify-items-center">
               {wishlistItems.map(product => (
-                <div key={product.id} className="bg-white rounded-lg shadow-soft overflow-hidden">
+                <div key={product.id} className="w-full max-w-sm">
                   <ProductCard product={product} />
                 </div>
               ))}
             </div>
 
-            {/* Actions */}
-            <div className="bg-white rounded-lg shadow-soft p-6 text-center">
-              <h3 className="text-lg font-semibold mb-4">Ready to buy?</h3>
-              <button
-                onClick={() => {
-                  wishlistItems.forEach(item => {
-                    addToCart(item);
-                  });
-                  clearWishlist();
-                }}
-                className="inline-block bg-slate-900 text-white px-8 py-3 rounded-lg font-semibold hover:bg-slate-700 transition flex items-center gap-2 btn-hover-lift"
-              >
-                <FiShoppingCart />
-                Move All to Cart
-              </button>
-            </div>
           </div>
         </section>
       ) : (

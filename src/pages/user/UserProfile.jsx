@@ -1,32 +1,175 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../context/AuthContext';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings, FiEye, FiClock, FiTruck, FiCheckCircle, FiBell } from 'react-icons/fi';
+import { fetchMyOrdersApi } from '../../services/orderService';
 
-function UserProfile() {
-  const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+const splitName = (name = '') => {
+  const trimmedName = String(name).trim();
+
+  if (!trimmedName) {
+    return { firstName: '', lastName: '' };
+  }
+
+  const [firstName, ...rest] = trimmedName.split(/\s+/);
+  return {
+    firstName,
+    lastName: rest.join(' ')
+  };
+};
+
+const buildProfileFormData = (user) => {
+  const shipping = user?.defaultShippingAddress || {};
+
+  return {
     name: user?.name || '',
     email: user?.email || '',
-    phone: '9876543210',
-    address: '123 Main Street',
-    city: 'New York',
-    state: 'NY',
-    zipcode: '10001',
-  });
+    phone: shipping.phone || user?.phone || '',
+    address: shipping.address || user?.address || '',
+    city: shipping.city || '',
+    state: shipping.state || '',
+    zipcode: shipping.zipcode || '',
+  };
+};
+
+function UserProfile() {
+  const { user, logout, updateUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('profile');
+  const [isEditing, setIsEditing] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [formData, setFormData] = useState(() => buildProfileFormData(user));
+
+  useEffect(() => {
+    setFormData(buildProfileFormData(user));
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveProfile = () => {
-    setIsEditing(false);
-    // API call would go here
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      setFormData(buildProfileFormData(user));
+      setSaveError('');
+    }
+
+    setSaveSuccess('');
+    setIsEditing((prev) => !prev);
+  };
+
+  const handleSaveProfile = async () => {
+    const trimmed = {
+      name: formData.name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      city: formData.city.trim(),
+      state: formData.state.trim(),
+      zipcode: formData.zipcode.trim()
+    };
+
+    if (!trimmed.name || !trimmed.email || !trimmed.phone || !trimmed.address || !trimmed.city || !trimmed.state || !trimmed.zipcode) {
+      setSaveSuccess('');
+      setSaveError('Please fill all profile and shipping address fields.');
+      return;
+    }
+
+    const { firstName, lastName } = splitName(trimmed.name);
+
+    try {
+      setSavingProfile(true);
+      setSaveError('');
+      setSaveSuccess('');
+
+      const result = await updateUser({
+        name: trimmed.name,
+        email: trimmed.email,
+        phone: trimmed.phone,
+        defaultShippingAddress: {
+          firstName: firstName || 'Customer',
+          lastName: lastName || 'User',
+          email: trimmed.email,
+          phone: trimmed.phone,
+          address: trimmed.address,
+          city: trimmed.city,
+          state: trimmed.state,
+          zipcode: trimmed.zipcode
+        }
+      });
+
+      if (!result.success) {
+        setSaveError(result.message || 'Failed to update profile');
+        return;
+      }
+
+      setFormData(buildProfileFormData(result.user));
+      setIsEditing(false);
+      setSaveSuccess('Profile and default shipping address saved successfully.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!user || activeTab !== 'orders') {
+        return;
+      }
+
+      try {
+        setOrdersLoading(true);
+        setOrdersError('');
+        const orderList = await fetchMyOrdersApi();
+        setOrders(orderList);
+      } catch (fetchError) {
+        setOrdersError(fetchError?.response?.data?.message || 'Failed to load orders');
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, [activeTab, user]);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'Shipped':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Out for Delivery':
+        return 'bg-purple-100 text-purple-800';
+      case 'Delivered':
+        return 'bg-green-100 text-green-800';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'Pending':
+        return <FiClock className="inline mr-1" />;
+      case 'Shipped':
+      case 'Out for Delivery':
+        return <FiTruck className="inline mr-1" />;
+      case 'Delivered':
+        return <FiCheckCircle className="inline mr-1" />;
+      default:
+        return <FiBell className="inline mr-1" />;
+    }
   };
 
   if (!user) {
@@ -49,12 +192,14 @@ function UserProfile() {
       <section className="bg-gradient-to-r from-slate-900 to-cyan-800 text-white py-12 px-4">
         <div className="container mx-auto flex items-center gap-8">
           <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-4xl">
-            U
+            {user.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div>
             <h1 className="text-4xl font-bold">{user.name}</h1>
             <p className="text-white opacity-90">{user.email}</p>
-            <p className="text-white opacity-75 text-sm">Member since {new Date(user.createdAt).toLocaleDateString()}</p>
+            <p className="text-white opacity-75 text-sm">
+              Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently joined'}
+            </p>
           </div>
         </div>
       </section>
@@ -124,13 +269,25 @@ function UserProfile() {
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Profile Information</h2>
                     <button
-                      onClick={() => setIsEditing(!isEditing)}
+                      onClick={handleToggleEdit}
                       className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition"
                     >
                       <FiEdit2 size={18} />
                       {isEditing ? 'Cancel' : 'Edit'}
                     </button>
                   </div>
+
+                  {saveError && (
+                    <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                      {saveError}
+                    </p>
+                  )}
+
+                  {saveSuccess && (
+                    <p className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700">
+                      {saveSuccess}
+                    </p>
+                  )}
 
                   {isEditing ? (
                     <form className="space-y-4">
@@ -197,9 +354,10 @@ function UserProfile() {
                       <button
                         type="button"
                         onClick={handleSaveProfile}
+                        disabled={savingProfile}
                         className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-700 transition btn-hover-lift"
                       >
-                        Save Changes
+                        {savingProfile ? 'Saving...' : 'Save Changes'}
                       </button>
                     </form>
                   ) : (
@@ -243,13 +401,74 @@ function UserProfile() {
               {/* Orders Tab */}
               {activeTab === 'orders' && (
                 <div className="bg-white rounded-lg shadow-soft p-8">
-                  <h2 className="text-2xl font-bold mb-6">Recent Orders</h2>
-                  <Link
-                    to="/orders"
-                    className="inline-block bg-slate-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-slate-700 transition"
-                  >
-                    View All Orders
-                  </Link>
+                  <h2 className="text-2xl font-bold mb-6">My Orders</h2>
+
+                  {ordersLoading ? (
+                    <div className="text-center py-10">
+                      <p className="text-gray-600">Loading orders...</p>
+                    </div>
+                  ) : ordersError ? (
+                    <div className="text-center py-10">
+                      <p className="text-red-600">{ordersError}</p>
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-10 border border-dashed border-gray-300 rounded-lg">
+                      <p className="text-gray-700 font-semibold mb-2">No orders found</p>
+                      <p className="text-gray-500 mb-4 text-sm">Aapne abhi tak koi order place nahi kiya.</p>
+                      <Link
+                        to="/products"
+                        className="inline-block bg-slate-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-slate-700 transition"
+                      >
+                        Start Shopping
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      {orders.map((order) => (
+                        <div key={order.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-soft transition">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-lg text-gray-900">Order #{order.id.slice(-8).toUpperCase()}</p>
+                              <p className="text-sm text-gray-600">Placed on {order.date}</p>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-slate-900">INR {order.total.toFixed(2)}</p>
+                                <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
+                                  {getStatusIcon(order.status)}
+                                  {order.status}
+                                </span>
+                              </div>
+
+                              <Link
+                                to={`/order/${order.id}/track`}
+                                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
+                              >
+                                <FiEye /> View Details
+                              </Link>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                            {order.products.slice(0, 4).map((product, idx) => (
+                              <div key={idx} className="flex-shrink-0 text-center w-20">
+                                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-md overflow-hidden mb-1">
+                                  {product.image ? (
+                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">N/A</div>
+                                  )}
+                                </div>
+                                <p className="text-[11px] font-semibold line-clamp-2">{product.name}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+
+                    </div>
+                  )}
                 </div>
               )}
 

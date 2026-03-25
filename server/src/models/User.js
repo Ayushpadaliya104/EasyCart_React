@@ -1,5 +1,43 @@
 const mongoose = require('mongoose');
 
+const defaultShippingAddressSchema = new mongoose.Schema(
+  {
+    firstName: {
+      type: String,
+      default: ''
+    },
+    lastName: {
+      type: String,
+      default: ''
+    },
+    email: {
+      type: String,
+      default: ''
+    },
+    phone: {
+      type: String,
+      default: ''
+    },
+    address: {
+      type: String,
+      default: ''
+    },
+    city: {
+      type: String,
+      default: ''
+    },
+    state: {
+      type: String,
+      default: ''
+    },
+    zipcode: {
+      type: String,
+      default: ''
+    }
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -33,6 +71,10 @@ const userSchema = new mongoose.Schema(
     address: {
       type: String,
       default: ''
+    },
+    defaultShippingAddress: {
+      type: defaultShippingAddressSchema,
+      default: () => ({})
     }
   },
   {

@@ -8,9 +8,50 @@ const CART_GUEST_KEY = 'cart_guest';
 const safeRead = (key) => {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (_error) {
     return [];
+  }
+};
+
+const normalizeQuantity = (quantity) => {
+  const parsed = Number(quantity);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+};
+
+const compactCartProduct = (product = {}) => ({
+  id: product.id,
+  name: product.name,
+  title: product.title,
+  price: product.price,
+  originalPrice: product.originalPrice,
+  image: product.image || (Array.isArray(product.images) ? product.images[0] : undefined),
+  category: product.category,
+  rating: product.rating,
+  stock: product.stock,
+  quantity: normalizeQuantity(product.quantity),
+});
+
+const writeCartToStorage = (key, items) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+    return true;
+  } catch (error) {
+    if (error?.name === 'QuotaExceededError') {
+      try {
+        const compactItems = (Array.isArray(items) ? items : []).map(compactCartProduct);
+        localStorage.setItem(key, JSON.stringify(compactItems));
+        return true;
+      } catch (_retryError) {
+        return false;
+      }
+    }
+    return false;
   }
 };
 
@@ -60,20 +101,23 @@ export function CartProvider({ children }) {
         }
 
         if (serverItems.length > 0) {
-          setCartItems(serverItems);
-          localStorage.setItem(userKey, JSON.stringify(serverItems));
+          const compactServerItems = serverItems.map(compactCartProduct);
+          setCartItems(compactServerItems);
+          writeCartToStorage(userKey, compactServerItems);
           return;
         }
 
-        const sourceItems = userLocalItems.length > 0 ? userLocalItems : guestItems;
+        const sourceItems = (userLocalItems.length > 0 ? userLocalItems : guestItems)
+          .map(compactCartProduct);
 
         if (sourceItems.length > 0) {
           const syncedItems = await replaceMyCartApi(sourceItems);
           if (!isMounted) {
             return;
           }
-          setCartItems(syncedItems);
-          localStorage.setItem(userKey, JSON.stringify(syncedItems));
+          const compactSyncedItems = syncedItems.map(compactCartProduct);
+          setCartItems(compactSyncedItems);
+          writeCartToStorage(userKey, compactSyncedItems);
           localStorage.removeItem(CART_GUEST_KEY);
         }
       } catch (_error) {
@@ -92,7 +136,7 @@ export function CartProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem(getCartStorageKey(user), JSON.stringify(cartItems));
+    writeCartToStorage(getCartStorageKey(user), cartItems);
 
     if (!user || isSyncing) {
       return;
@@ -106,14 +150,18 @@ export function CartProvider({ children }) {
   }, [cartItems, user, isSyncing]);
 
   const addToCart = (product) => {
+    const nextItem = compactCartProduct(product);
+
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
+      const existingItem = prevItems.find(item => item.id === nextItem.id);
       if (existingItem) {
         return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === nextItem.id
+            ? { ...item, quantity: item.quantity + normalizeQuantity(nextItem.quantity) }
+            : item
         );
       }
-      return [...prevItems, { ...product, quantity: 1 }];
+      return [...prevItems, nextItem];
     });
   };
 

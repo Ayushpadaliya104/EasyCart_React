@@ -128,6 +128,13 @@ body {
   animation: pageEnter 0.45s ease-out;
 }
 
+/* Reduce horizontal side spacing across pages that use Tailwind container */
+.container {
+  max-width: 96% !important;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
 @keyframes pageEnter {
   from {
     opacity: 0;
@@ -142,6 +149,7 @@ body {
 /* Responsive Grid */
 @media (max-width: 768px) {
   .container {
-    padding: 0 16px;
+    max-width: 100% !important;
+    padding: 0 10px;
   }
 }

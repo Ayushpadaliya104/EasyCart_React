@@ -1,11 +1,12 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiShoppingCart, FiSearch, FiMenu, FiX, FiHeart, FiUser } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useQuery } from '../context/QueryContext';
 
 function Navbar() {
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const { getTotalItems } = useCart();
   const { user, logout } = useAuth();
@@ -13,18 +14,28 @@ function Navbar() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const unreadQueries = getUnreadCountForUser(user?.email);
 
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) {
+      navigate('/products');
+      return;
+    }
+    navigate(`/products?search=${encodeURIComponent(query)}`);
+  };
+
   return (
     <nav className="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <div className="gradient-text text-2xl font-bold tracking-tight">EasyCart</div>
+            <div className="gradient-text text-3xl md:text-4xl font-extrabold tracking-tight">EasyCart</div>
           </Link>
 
           {/* Search Bar */}
           <div className="hidden md:flex flex-1 mx-8">
-            <div className="relative w-full">
+            <form className="relative w-full" onSubmit={handleSearchSubmit}>
               <input
                 type="text"
                 placeholder="Search products..."
@@ -32,8 +43,10 @@ function Navbar() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
               />
-              <FiSearch className="absolute right-3 top-3 text-slate-400" />
-            </div>
+              <button type="submit" className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-900">
+                <FiSearch />
+              </button>
+            </form>
           </div>
 
           {/* Desktop Navigation */}
@@ -96,6 +109,18 @@ function Navbar() {
         {/* Mobile Menu */}
         {mobileOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-slate-200 pt-4 space-y-3">
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
+              />
+              <button type="submit" className="absolute right-3 top-2.5 text-slate-500">
+                <FiSearch />
+              </button>
+            </form>
             <Link to="/products" className="block text-slate-700 hover:text-slate-900">
               Products
             </Link>

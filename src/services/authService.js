@@ -14,3 +14,8 @@ export const getMeApi = async () => {
   const response = await apiClient.get('/auth/me');
   return response.data;
 };
+
+export const updateMeApi = async (payload) => {
+  const response = await apiClient.put('/auth/me', payload);
+  return response.data;
+};
