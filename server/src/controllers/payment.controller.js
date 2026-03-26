@@ -17,6 +17,9 @@ const getRazorpayClient = () => {
   });
 };
 
+const shouldUseMockGateway = () =>
+  env.razorpayMockMode && (!env.razorpayKeyId || !env.razorpayKeySecret);
+
 const getRazorpayErrorMessage = (error) => {
   const description = error?.error?.description || error?.message || '';
   const normalized = String(description).toLowerCase();
@@ -101,7 +104,7 @@ const createRazorpayOrder = async (req, res, next) => {
       });
     }
 
-    if (env.razorpayMockMode) {
+    if (shouldUseMockGateway()) {
       return res.status(201).json({
         success: true,
         order: buildMockOrder(totals),
@@ -151,7 +154,7 @@ const createRazorpayOrder = async (req, res, next) => {
 const verifyRazorpayPayment = async (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-  if (env.razorpayMockMode) {
+  if (shouldUseMockGateway()) {
     if (!razorpay_order_id || !razorpay_payment_id) {
       return res.status(400).json({
         success: false,
