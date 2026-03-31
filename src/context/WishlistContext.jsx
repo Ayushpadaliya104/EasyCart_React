@@ -5,6 +5,8 @@ const WishlistContext = createContext();
 
 const WISHLIST_GUEST_KEY = 'wishlist';
 
+const normalizeProductId = (productId) => String(productId ?? '');
+
 const readWishlistFromStorage = (key) => {
   try {
     const raw = localStorage.getItem(key);
@@ -21,7 +23,7 @@ const readWishlistFromStorage = (key) => {
 };
 
 const compactWishlistProduct = (product = {}) => ({
-  id: product.id,
+  id: normalizeProductId(product.id),
   name: product.name,
   title: product.title,
   price: product.price,
@@ -81,20 +83,23 @@ export function WishlistProvider({ children }) {
 
   const addToWishlist = (product) => {
     setWishlistItems(prevItems => {
-      const exists = prevItems.find(item => item.id === product.id);
+      const normalizedId = normalizeProductId(product.id);
+      const exists = prevItems.find(item => normalizeProductId(item.id) === normalizedId);
       if (exists) {
         return prevItems;
       }
-      return [...prevItems, compactWishlistProduct(product)];
+      return [...prevItems, compactWishlistProduct({ ...product, id: normalizedId })];
     });
   };
 
   const removeFromWishlist = (productId) => {
-    setWishlistItems(prevItems => prevItems.filter(item => item.id !== productId));
+    const normalizedId = normalizeProductId(productId);
+    setWishlistItems(prevItems => prevItems.filter(item => normalizeProductId(item.id) !== normalizedId));
   };
 
   const isInWishlist = (productId) => {
-    return wishlistItems.some(item => item.id === productId);
+    const normalizedId = normalizeProductId(productId);
+    return wishlistItems.some(item => normalizeProductId(item.id) === normalizedId);
   };
 
   const clearWishlist = () => {

@@ -3,15 +3,21 @@ const express = require('express');
 const {
   getProducts,
   getProductByIdOrSlug,
+  getProductFeedback,
+  upsertProductRating,
+  createProductReview,
   createProduct,
   updateProduct,
   deleteProduct
 } = require('../controllers/product.controller');
-const { protect, requireAdmin } = require('../middlewares/auth.middleware');
+const { protect, requireAdmin, optionalProtect } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
 router.get('/', getProducts);
+router.get('/:idOrSlug/feedback', optionalProtect, getProductFeedback);
+router.post('/:idOrSlug/rating', protect, upsertProductRating);
+router.post('/:idOrSlug/reviews', protect, createProductReview);
 router.get('/:idOrSlug', getProductByIdOrSlug);
 router.post('/', protect, requireAdmin, createProduct);
 router.put('/:id', protect, requireAdmin, updateProduct);

@@ -54,6 +54,24 @@ export const fetchProductById = async (idOrSlug) => {
   return normalizeProduct(response.data.product);
 };
 
+export const fetchProductFeedback = async (idOrSlug) => {
+  const response = await apiClient.get(`/products/${idOrSlug}/feedback`);
+  return {
+    ratings: response.data.ratings || { average: 0, count: 0, myRating: 0 },
+    reviews: response.data.reviews || []
+  };
+};
+
+export const saveProductRating = async (idOrSlug, rating) => {
+  const response = await apiClient.post(`/products/${idOrSlug}/rating`, { rating });
+  return response.data;
+};
+
+export const createProductReviewApi = async (idOrSlug, comment) => {
+  const response = await apiClient.post(`/products/${idOrSlug}/reviews`, { comment });
+  return response.data;
+};
+
 export const fetchCategories = async () => {
   const response = await apiClient.get('/categories');
   return (response.data.categories || []).map(normalizeCategory);

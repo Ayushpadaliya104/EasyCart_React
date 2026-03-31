@@ -1,7 +1,43 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const ProductRating = require('../models/ProductRating');
+const ProductReview = require('../models/ProductReview');
 const slugify = require('../utils/slugify');
+
+const resolveProductByIdOrSlug = async (idOrSlug) => {
+  const query = mongoose.Types.ObjectId.isValid(idOrSlug)
+    ? { _id: idOrSlug, isActive: true }
+    : { slug: idOrSlug.toLowerCase(), isActive: true };
+
+  return Product.findOne(query);
+};
+
+const syncProductRatingSummary = async (productId) => {
+  const summary = await ProductRating.aggregate([
+    { $match: { product: new mongoose.Types.ObjectId(productId) } },
+    {
+      $group: {
+        _id: '$product',
+        averageRating: { $avg: '$rating' },
+        ratingCount: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const nextRating = summary.length > 0 ? Number(summary[0].averageRating || 0) : 0;
+  const nextCount = summary.length > 0 ? Number(summary[0].ratingCount || 0) : 0;
+
+  await Product.findByIdAndUpdate(productId, {
+    rating: Number(nextRating.toFixed(2)),
+    reviews: nextCount
+  });
+
+  return {
+    average: Number(nextRating.toFixed(1)),
+    count: nextCount
+  };
+};
 
 const getProducts = async (req, res, next) => {
   try {
@@ -78,12 +114,7 @@ const getProducts = async (req, res, next) => {
 const getProductByIdOrSlug = async (req, res, next) => {
   try {
     const { idOrSlug } = req.params;
-
-    const query = mongoose.Types.ObjectId.isValid(idOrSlug)
-      ? { _id: idOrSlug, isActive: true }
-      : { slug: idOrSlug.toLowerCase(), isActive: true };
-
-    const product = await Product.findOne(query).populate('category', 'name slug');
+    const product = await resolveProductByIdOrSlug(idOrSlug);
 
     if (!product) {
       return res.status(404).json({
@@ -92,9 +123,143 @@ const getProductByIdOrSlug = async (req, res, next) => {
       });
     }
 
+    const hydratedProduct = await Product.findById(product._id).populate('category', 'name slug');
+
     return res.status(200).json({
       success: true,
-      product
+      product: hydratedProduct
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getProductFeedback = async (req, res, next) => {
+  try {
+    const { idOrSlug } = req.params;
+    const product = await resolveProductByIdOrSlug(idOrSlug);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const [summary, reviews, myRatingDoc] = await Promise.all([
+      syncProductRatingSummary(product._id),
+      ProductReview.find({ product: product._id })
+        .sort({ createdAt: -1 })
+        .select('_id userName comment createdAt'),
+      req.user
+        ? ProductRating.findOne({ product: product._id, user: req.user._id }).select('rating')
+        : null
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      ratings: {
+        average: summary.average,
+        count: summary.count,
+        myRating: myRatingDoc ? Number(myRatingDoc.rating || 0) : 0
+      },
+      reviews: reviews.map((item) => ({
+        id: item._id,
+        name: item.userName,
+        comment: item.comment,
+        createdAt: item.createdAt
+      }))
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const upsertProductRating = async (req, res, next) => {
+  try {
+    const { idOrSlug } = req.params;
+    const { rating } = req.body;
+
+    const numericRating = Number(rating);
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'rating must be a number between 1 and 5'
+      });
+    }
+
+    const product = await resolveProductByIdOrSlug(idOrSlug);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const existing = await ProductRating.findOne({
+      product: product._id,
+      user: req.user._id
+    });
+
+    await ProductRating.findOneAndUpdate(
+      { product: product._id, user: req.user._id },
+      { rating: numericRating },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    const summary = await syncProductRatingSummary(product._id);
+
+    return res.status(200).json({
+      success: true,
+      message: existing ? 'Rating updated successfully' : 'Rating submitted successfully',
+      ratings: {
+        average: summary.average,
+        count: summary.count,
+        myRating: numericRating
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const createProductReview = async (req, res, next) => {
+  try {
+    const { idOrSlug } = req.params;
+    const { comment } = req.body;
+
+    const cleanComment = String(comment || '').trim();
+    if (!cleanComment) {
+      return res.status(400).json({
+        success: false,
+        message: 'comment is required'
+      });
+    }
+
+    const product = await resolveProductByIdOrSlug(idOrSlug);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    const review = await ProductReview.create({
+      product: product._id,
+      user: req.user._id,
+      userName: req.user.name || 'Customer',
+      comment: cleanComment
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Review submitted successfully',
+      review: {
+        id: review._id,
+        name: review.userName,
+        comment: review.comment,
+        createdAt: review.createdAt
+      }
     });
   } catch (error) {
     return next(error);
@@ -233,6 +398,9 @@ const deleteProduct = async (req, res, next) => {
 module.exports = {
   getProducts,
   getProductByIdOrSlug,
+  getProductFeedback,
+  upsertProductRating,
+  createProductReview,
   createProduct,
   updateProduct,
   deleteProduct

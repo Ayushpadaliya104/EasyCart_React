@@ -82,14 +82,14 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-green-50 to-emerald-50">
       <Navbar />
 
       <section className="py-12 px-4 flex items-center justify-center">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-soft p-8">
-            <h1 className="text-3xl font-bold text-center mb-2 gradient-text">EasyCart</h1>
-            <h2 className="text-2xl font-bold text-center mb-6">Create Account</h2>
+          <div className="bg-gradient-to-br from-white to-green-50 rounded-2xl shadow-2xl p-8 border border-green-100">
+            <h1 className="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">EasyCart</h1>
+            <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-green-700 to-teal-700 bg-clip-text text-transparent">Create Account</h2>
 
             {successMessage && (
               <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
@@ -100,17 +100,17 @@ function Register() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Full Name</label>
+                <label className="block text-sm font-semibold mb-2 text-green-700">Full Name</label>
                 <div className="relative">
-                  <FiUser className="absolute left-3 top-3 text-gray-400" />
+                  <FiUser className="absolute left-3 top-3 text-green-400" />
                   <input
                     type="text"
                     name="name"
                     placeholder="Enter your full name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition ${
-                      errors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition ${
+                      errors.name ? 'border-red-500 bg-red-50' : 'border-green-200'
                     }`}
                   />
                 </div>
@@ -119,17 +119,17 @@ function Register() {
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Email Address</label>
+                <label className="block text-sm font-semibold mb-2 text-green-700">Email Address</label>
                 <div className="relative">
-                  <FiMail className="absolute left-3 top-3 text-gray-400" />
+                  <FiMail className="absolute left-3 top-3 text-green-400" />
                   <input
                     type="email"
                     name="email"
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition ${
-                      errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition ${
+                      errors.email ? 'border-red-500 bg-red-50' : 'border-green-200'
                     }`}
                   />
                 </div>
@@ -138,23 +138,23 @@ function Register() {
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Password</label>
+                <label className="block text-sm font-semibold mb-2 text-green-700">Password</label>
                 <div className="relative">
-                  <FiLock className="absolute left-3 top-3 text-gray-400" />
+                  <FiLock className="absolute left-3 top-3 text-green-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     placeholder="Create a strong password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition ${
-                      errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    className={`w-full pl-10 pr-10 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition ${
+                      errors.password ? 'border-red-500 bg-red-50' : 'border-green-200'
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-3 text-green-400 hover:text-green-600"
                   >
                     {showPassword ? <FiEyeOff /> : <FiEye />}
                   </button>
@@ -164,23 +164,23 @@ function Register() {
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-sm font-semibold mb-2">Confirm Password</label>
+                <label className="block text-sm font-semibold mb-2 text-green-700">Confirm Password</label>
                 <div className="relative">
-                  <FiLock className="absolute left-3 top-3 text-gray-400" />
+                  <FiLock className="absolute left-3 top-3 text-green-400" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     name="confirmPassword"
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition ${
-                      errors.confirmPassword ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    className={`w-full pl-10 pr-10 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition ${
+                      errors.confirmPassword ? 'border-red-500 bg-red-50' : 'border-green-200'
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-3 text-green-400 hover:text-green-600"
                   >
                     {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                   </button>
@@ -196,10 +196,10 @@ function Register() {
                     name="agreeTerms"
                     checked={formData.agreeTerms}
                     onChange={handleInputChange}
-                    className="w-4 h-4 mt-1 cursor-pointer"
+                    className="w-4 h-4 mt-1 cursor-pointer accent-green-600"
                   />
                   <span className="text-sm text-gray-700">
-                    I agree to the <Link to="#" className="text-primary font-semibold hover:underline">Terms and Conditions</Link> and <Link to="#" className="text-primary font-semibold hover:underline">Privacy Policy</Link>
+                    I agree to the <Link to="#" className="text-green-600 font-semibold hover:underline">Terms and Conditions</Link> and <Link to="#" className="text-green-600 font-semibold hover:underline">Privacy Policy</Link>
                   </span>
                 </label>
                 {errors.agreeTerms && <p className="error-message">{errors.agreeTerms}</p>}
@@ -209,7 +209,7 @@ function Register() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-700 transition disabled:opacity-50 btn-hover-lift"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 btn-hover-lift shadow-lg"
               >
                 {isLoading ? 'Creating account...' : 'Create Account'}
               </button>
@@ -217,34 +217,18 @@ function Register() {
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+                  <div className="w-full border-t border-green-300"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or sign up with</span>
+                  <span className="px-2 bg-white text-green-600 font-semibold">Already registered? Sign in</span>
                 </div>
-              </div>
-
-              {/* Social Signup */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className="border border-gray-300 py-2 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
-                >
-                  Google
-                </button>
-                <button
-                  type="button"
-                  className="border border-gray-300 py-2 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
-                >
-                  Facebook
-                </button>
               </div>
             </form>
 
             {/* Sign In Link */}
-            <p className="text-center text-gray-600 mt-6">
+            <p className="text-center text-gray-700 mt-6">
               Already have an account?{' '}
-              <Link to="/login" className="text-slate-900 font-semibold hover:underline">
+              <Link to="/login" className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent font-bold hover:from-green-700 hover:to-emerald-700 transition">
                 Sign in here
               </Link>
             </p>
@@ -258,4 +242,3 @@ function Register() {
 }
 
 export default Register;
-

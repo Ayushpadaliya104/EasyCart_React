@@ -27,19 +27,29 @@ function QueryManagement() {
     }
   }, [selectedQuery?.id, markQueryReadByAdmin]);
 
-  const handleReply = () => {
+  const handleReply = async () => {
     if (!selectedQuery || !replyText.trim()) {
       return;
     }
 
-    addReply(selectedQuery.id, replyText, 'Admin');
-    setReplyText('');
+    try {
+      await addReply(selectedQuery.id, replyText, 'Admin');
+      setReplyText('');
+    } catch (_error) {
+    }
+  };
+
+  const handleStatusChange = async (queryId, status) => {
+    try {
+      await updateStatus(queryId, status);
+    } catch (_error) {
+    }
   };
 
   return (
     <AdminLayout
       title="Query Management"
-      subtitle="User queries dekhein, status update karein, aur direct reply bhejein."
+      subtitle="View user queries, update status, and send direct replies."
       activePath="/admin/queries"
     >
       <section className="grid grid-cols-1 xl:grid-cols-5 gap-6">
@@ -94,7 +104,7 @@ function QueryManagement() {
                 </div>
                 <select
                   value={selectedQuery.status}
-                  onChange={(e) => updateStatus(selectedQuery.id, e.target.value)}
+                  onChange={(e) => handleStatusChange(selectedQuery.id, e.target.value)}
                   className="border border-slate-300 rounded-xl px-3 py-2"
                 >
                   <option value="Open">Open</option>

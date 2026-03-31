@@ -1,4 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import {
+  fetchQueriesApi,
+  createQueryApi,
+  addQueryReplyApi,
+  updateQueryStatusApi,
+  markQueryReadByAdminApi,
+  markQueriesReadByUserApi
+} from '../services/queryService';
 
 const QueryContext = createContext();
 
@@ -10,104 +19,73 @@ const normalizeQuery = (query) => ({
 });
 
 export function QueryProvider({ children }) {
-  const [queries, setQueries] = useState(() => {
-    const saved = localStorage.getItem('queries');
-    return saved ? JSON.parse(saved).map(normalizeQuery) : [];
-  });
+  const { user } = useAuth();
+  const [queries, setQueries] = useState([]);
+
+  const loadQueries = React.useCallback(async () => {
+    if (!user) {
+      setQueries([]);
+      return;
+    }
+
+    try {
+      const response = await fetchQueriesApi();
+      setQueries((response.queries || []).map(normalizeQuery));
+    } catch (_error) {
+      setQueries([]);
+    }
+  }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('queries', JSON.stringify(queries));
-  }, [queries]);
+    loadQueries();
+  }, [loadQueries]);
 
-  const addQuery = ({ userName, userEmail, subject, category, message }) => {
-    const nextQuery = {
-      id: `Q-${Date.now()}`,
-      userName,
-      userEmail,
-      subject,
-      category,
-      message,
-      status: 'Open',
-      createdAt: new Date().toISOString(),
-      replies: [],
-      unreadByAdmin: true,
-      unreadByUser: false,
-    };
+  const addQuery = async ({ subject, category, message }) => {
+    if (!user) {
+      throw new Error('Please login to submit a query');
+    }
 
+    const response = await createQueryApi({ subject, category, message });
+    const nextQuery = normalizeQuery(response.query);
     setQueries((prev) => [nextQuery, ...prev]);
     return nextQuery.id;
   };
 
-  const addReply = (queryId, replyText, author = 'Admin') => {
+  const addReply = async (queryId, replyText, author = 'Admin') => {
     if (!replyText.trim()) {
       return;
     }
 
-    setQueries((prev) =>
-      prev.map((query) => {
-        if (query.id !== queryId) {
-          return query;
-        }
-
-        return {
-          ...query,
-          status: 'Answered',
-          unreadByAdmin: false,
-          unreadByUser: true,
-          replies: [
-            ...query.replies,
-            {
-              id: `R-${Date.now()}`,
-              text: replyText.trim(),
-              author,
-              createdAt: new Date().toISOString(),
-            },
-          ],
-        };
-      })
-    );
+    const response = await addQueryReplyApi(queryId, { replyText, author });
+    const updated = normalizeQuery(response.query);
+    setQueries((prev) => prev.map((query) => (query.id === queryId ? updated : query)));
   };
 
-  const updateStatus = (queryId, status) => {
-    setQueries((prev) =>
-      prev.map((query) => (query.id === queryId ? { ...query, status } : query))
-    );
+  const updateStatus = async (queryId, status) => {
+    const response = await updateQueryStatusApi(queryId, status);
+    const updated = normalizeQuery(response.query);
+    setQueries((prev) => prev.map((query) => (query.id === queryId ? updated : query)));
   };
 
-  const markQueryReadByAdmin = (queryId) => {
-    setQueries((prev) => {
-      let hasChange = false;
-      const next = prev.map((query) => {
-        if (query.id !== queryId || !query.unreadByAdmin) {
-          return query;
-        }
-
-        hasChange = true;
-        return { ...query, unreadByAdmin: false };
-      });
-
-      return hasChange ? next : prev;
-    });
+  const markQueryReadByAdmin = async (queryId) => {
+    const response = await markQueryReadByAdminApi(queryId);
+    const updated = normalizeQuery(response.query);
+    setQueries((prev) => prev.map((query) => (query.id === queryId ? updated : query)));
   };
 
-  const markQueriesReadByUser = (userEmail) => {
+  const markQueriesReadByUser = async (userEmail) => {
     if (!userEmail) {
       return;
     }
 
-    setQueries((prev) => {
-      let hasChange = false;
-      const next = prev.map((query) => {
-        if (query.userEmail !== userEmail || !query.unreadByUser) {
-          return query;
-        }
-
-        hasChange = true;
-        return { ...query, unreadByUser: false };
-      });
-
-      return hasChange ? next : prev;
-    });
+    await markQueriesReadByUserApi();
+    setQueries((prev) =>
+      prev.map((query) =>
+        query.userEmail === userEmail
+          ? { ...query, unreadByUser: false }
+          : query
+      )
+    );
   };
 
   const getUnreadCountForAdmin = () => {

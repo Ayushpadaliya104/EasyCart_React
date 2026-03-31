@@ -66,10 +66,10 @@ function OrderTracking() {
   }
 
   const getStatusBadgeColor = () => {
-    if (order.status === 'Delivered') return 'bg-green-100 text-green-800';
-    if (order.status === 'Shipped' || order.status === 'Out for Delivery') return 'bg-blue-100 text-blue-800';
-    if (order.status === 'Processing') return 'bg-indigo-100 text-indigo-800';
-    return 'bg-orange-100 text-orange-800';
+    if (order.status === 'Delivered') return 'bg-gradient-to-r from-green-300 to-emerald-400 text-green-900 font-bold shadow-md';
+    if (order.status === 'Shipped' || order.status === 'Out for Delivery') return 'bg-gradient-to-r from-blue-300 to-cyan-400 text-blue-900 font-bold shadow-md';
+    if (order.status === 'Processing') return 'bg-gradient-to-r from-indigo-300 to-purple-400 text-indigo-900 font-bold shadow-md';
+    return 'bg-gradient-to-r from-orange-300 to-amber-400 text-orange-900 font-bold shadow-md';
   };
 
   const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
@@ -274,15 +274,15 @@ function OrderTracking() {
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-5xl">
           {/* Order Header Card */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-red-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-orange-200">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-8">
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-orange-100 rounded-lg flex-shrink-0">
-                  <FiTruck size={28} className="text-orange-600" />
+                <div className="p-3 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex-shrink-0 shadow-lg">
+                  <FiTruck size={28} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Order #{order.id.slice(-4).toUpperCase()}</h1>
-                  <p className="text-gray-600 text-sm mt-1">
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Order #{order.id.slice(-4).toUpperCase()}</h1>
+                  <p className="text-orange-700 text-sm mt-1 font-semibold">
                     {order.date}
                   </p>
                   <div className={`mt-3 inline-block px-4 py-1 rounded-full text-sm font-bold ${getStatusBadgeColor()}`}>
@@ -294,7 +294,7 @@ function OrderTracking() {
               {order.status === 'Delivered' && (
                 <button
                   onClick={handleDownloadInvoice}
-                  className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition text-sm"
+                  className="inline-flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition text-sm shadow-lg"
                 >
                   <FiDownload />
                   Download Invoice
@@ -304,23 +304,23 @@ function OrderTracking() {
           </div>
 
           {/* Timeline/Progress */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-purple-200">
             <div className="flex justify-between items-center relative mb-12">
               {/* Timeline Line Background */}
-              <div className="absolute top-8 left-0 right-0 h-1 bg-gray-200 z-0"></div>
+              <div className="absolute top-8 left-0 right-0 h-2 bg-gray-300 z-0 rounded-full"></div>
 
               {/* Completed Line */}
-              <div className="absolute top-8 left-0 h-1 bg-orange-600 z-0" style={{
+              <div className="absolute top-8 left-0 h-2 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 z-0 rounded-full" style={{
                 width: `${(order.timeline.filter(t => t.completed).length / order.timeline.length) * 100}%`
               }}></div>
 
               {/* Timeline Steps */}
               {order.timeline.map((step, idx) => (
                 <div key={idx} className="flex flex-col items-center relative z-10">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-lg transition ${
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-lg transition shadow-lg ${
                     step.completed 
-                      ? 'bg-orange-600 text-white' 
-                      : 'bg-white border-2 border-gray-300 text-gray-600'
+                      ? 'bg-gradient-to-br from-orange-500 to-red-600 text-white' 
+                      : 'bg-white border-3 border-gray-400 text-gray-600 hover:border-purple-400'
                   }`}>
                     {step.completed ? <FiCheckCircle size={24} /> : <FiClock size={24} />}
                   </div>
@@ -335,12 +335,12 @@ function OrderTracking() {
           {/* Items & Delivery Details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             {/* Items Section */}
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">ITEMS (1)</h3>
+            <div className="lg:col-span-2 bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-xl shadow-lg p-8 border-2 border-orange-200">
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">ITEMS ({order.products.length})</h3>
 
               {order.products.map((product, idx) => (
-                <div key={idx} className="flex gap-6 pb-6 border-b last:border-b-0 last:pb-0">
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden border border-gray-200">
+                <div key={idx} className="flex gap-6 pb-6 border-b-2 border-orange-300 last:border-b-0 last:pb-0 bg-white bg-opacity-70 p-4 rounded-lg mb-4 hover:bg-opacity-100 transition shadow-md">
+                  <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-lg flex-shrink-0 overflow-hidden border-3 border-orange-300 shadow-md">
                     <img
                       src={product.image || 'https://via.placeholder.com/100'}
                       alt={product.name}
@@ -348,67 +348,71 @@ function OrderTracking() {
                     />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-lg mb-1">{product.name}</h4>
-                    <p className="text-gray-600 text-sm mb-2">Qty: {product.quantity}</p>
-                    <p className="text-xl font-bold text-slate-900">₹{(product.price * product.quantity).toFixed(2)}</p>
+                    <h4 className="font-bold text-gray-900 text-lg mb-1 text-orange-900">{product.name}</h4>
+                    <p className="text-orange-700 text-sm mb-2 font-semibold">Qty: {product.quantity}</p>
+                    <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">₹{(product.price * product.quantity).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Delivery Details */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="font-bold text-lg text-gray-900 mb-6 flex items-center gap-2">
-                <FiMapPin className="text-orange-600" />
+            <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl shadow-lg p-8 border-2 border-teal-300">
+              <h3 className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600 mb-6 flex items-center gap-2">
+                <FiMapPin className="text-gradient" size={24} />
                 DELIVERY DETAILS
               </h3>
 
               <div className="space-y-4 mb-6">
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Customer</p>
-                  <p className="font-bold text-gray-900">{user?.name || 'Customer'}</p>
+                <div className="bg-white bg-opacity-70 p-3 rounded-lg hover:bg-opacity-100 transition">
+                  <p className="text-teal-700 text-xs font-semibold uppercase mb-1">Customer</p>
+                  <p className="font-bold text-teal-900">{user?.name || 'Customer'}</p>
                 </div>
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Email</p>
-                  <p className="font-bold text-gray-900 text-sm break-all">{user?.email}</p>
+                <div className="bg-white bg-opacity-70 p-3 rounded-lg hover:bg-opacity-100 transition">
+                  <p className="text-teal-700 text-xs font-semibold uppercase mb-1">Email</p>
+                  <p className="font-bold text-teal-900 text-sm break-all">{user?.email}</p>
                 </div>
-                <div>
-                  <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Address</p>
-                  <p className="font-bold text-gray-900 text-sm leading-relaxed">{order.address}</p>
+                <div className="bg-white bg-opacity-70 p-3 rounded-lg hover:bg-opacity-100 transition">
+                  <p className="text-teal-700 text-xs font-semibold uppercase mb-1">Address</p>
+                  <p className="font-bold text-teal-900 text-sm leading-relaxed">{order.address}</p>
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <p className="text-gray-600 text-xs font-semibold uppercase mb-2">Total Amount</p>
-                <p className="text-3xl font-bold text-slate-900">₹{order.total.toFixed(2)}</p>
+              <div className="border-t-2 border-teal-300 pt-6">
+                <p className="text-teal-700 text-xs font-semibold uppercase mb-2">Total Amount</p>
+                <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600">₹{order.total.toFixed(2)}</p>
               </div>
             </div>
           </div>
 
           {/* Full Timeline Details */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">TIMELINE</h3>
+          <div className="bg-gradient-to-r from-violet-50 via-purple-50 to-pink-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-purple-200">
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">TIMELINE</h3>
 
             <div className="space-y-4">
               {order.timeline.map((step, idx) => (
-                <div key={idx} className={`flex gap-4 p-4 rounded-lg ${
-                  step.completed ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                <div key={idx} className={`flex gap-4 p-4 rounded-lg border-2 transition ${
+                  step.completed ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-300 shadow-md' : 'bg-gradient-to-r from-gray-100 to-slate-100 border-gray-300'
                 }`}>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    step.completed ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-600'
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-white ${
+                    step.completed ? 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg' : 'bg-gradient-to-br from-gray-500 to-slate-600'
                   }`}>
                     {step.completed ? <FiCheckCircle size={20} /> : <FiClock size={20} />}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-900">{step.status}</h4>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <h4 className={`font-bold ${
+                      step.completed ? 'text-green-900' : 'text-gray-700'
+                    }`}>{step.status}</h4>
+                    <p className={`text-sm mt-1 ${
+                      step.completed ? 'text-green-700 font-semibold' : 'text-gray-600'
+                    }`}>
                       {step.date || 'Pending'}
                     </p>
                   </div>
                   <div className={`text-xs font-bold px-3 py-1 rounded-full self-center ${
                     step.completed 
-                      ? 'bg-green-200 text-green-800' 
-                      : 'bg-gray-200 text-gray-700'
+                      ? 'bg-gradient-to-r from-green-200 to-emerald-300 text-green-900' 
+                      : 'bg-gradient-to-r from-gray-200 to-slate-300 text-gray-800'
                   }`}>
                     {step.completed ? 'Completed' : 'Pending'}
                   </div>
@@ -418,37 +422,37 @@ function OrderTracking() {
           </div>
 
           {/* Support Info */}
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <h3 className="font-bold text-lg text-gray-900 mb-6">NEED HELP?</h3>
+          <div className="bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-blue-200">
+            <h3 className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 mb-6">NEED HELP?</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex items-start gap-4">
-                <FiPhone size={24} className="text-orange-600 flex-shrink-0 mt-1" />
+              <div className="flex items-start gap-4 bg-white bg-opacity-70 p-4 rounded-lg hover:bg-opacity-100 transition border-l-4 border-indigo-500 shadow-md">
+                <FiPhone size={24} className="text-indigo-600 flex-shrink-0 mt-1 font-bold" />
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold">Phone Support</p>
-                  <p className="font-bold text-lg text-gray-900">{settings.phone}</p>
+                  <p className="text-indigo-700 text-sm font-semibold">Phone Support</p>
+                  <p className="font-bold text-lg text-indigo-900">{settings.phone}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <FiMail size={24} className="text-orange-600 flex-shrink-0 mt-1" />
+              <div className="flex items-start gap-4 bg-white bg-opacity-70 p-4 rounded-lg hover:bg-opacity-100 transition border-l-4 border-blue-500 shadow-md">
+                <FiMail size={24} className="text-blue-600 flex-shrink-0 mt-1 font-bold" />
                 <div>
-                  <p className="text-gray-600 text-sm font-semibold">Email Support</p>
-                  <p className="font-bold text-lg text-gray-900 break-all">{settings.email}</p>
+                  <p className="text-blue-700 text-sm font-semibold">Email Support</p>
+                  <p className="font-bold text-lg text-blue-900 break-all">{settings.email}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
             <Link
               to="/orders"
-              className="px-8 py-3 border-2 border-slate-900 text-slate-900 rounded-lg font-bold hover:bg-gray-50 transition"
+              className="px-8 py-3 border-2 border-slate-700 text-white bg-slate-700 rounded-lg font-bold hover:bg-slate-800 transition shadow-lg"
             >
               Back to Orders
             </Link>
             <Link
               to="/products"
-              className="px-8 py-3 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 transition"
+              className="px-8 py-3 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white rounded-lg font-bold hover:from-orange-600 hover:via-red-600 hover:to-pink-600 transition shadow-lg"
             >
               Continue Shopping
             </Link>

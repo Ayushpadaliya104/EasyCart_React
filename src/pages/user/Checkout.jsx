@@ -321,7 +321,7 @@ function Checkout() {
                 <div className="mb-8 rounded-2xl border border-sky-100 bg-white/90 p-8 shadow-xl shadow-sky-100/60 backdrop-blur">
                   <h2 className="text-2xl font-bold mb-6">Shipping Address</h2>
                   <p className="text-sm text-gray-600 mb-6">
-                    Profile ka default shipping address yahan auto-fill hota hai. Aap checkout ke liye isse change bhi kar sakte ho.
+                    Your profile's default shipping address is auto-filled here. You can edit it for this checkout.
                   </p>
                   
                   <div className="grid grid-cols-2 gap-4 mb-4">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../context/AuthContext';
+import { useWishlist } from '../../context/WishlistContext';
 import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings, FiEye, FiClock, FiTruck, FiCheckCircle, FiBell } from 'react-icons/fi';
 import { fetchMyOrdersApi } from '../../services/orderService';
 
@@ -36,6 +37,7 @@ const buildProfileFormData = (user) => {
 
 function UserProfile() {
   const { user, logout, updateUser } = useAuth();
+  const { wishlistItems, removeFromWishlist } = useWishlist();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [orders, setOrders] = useState([]);
@@ -45,6 +47,16 @@ function UserProfile() {
   const [saveSuccess, setSaveSuccess] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [formData, setFormData] = useState(() => buildProfileFormData(user));
+  
+  // Password change state
+  const [passwordFormData, setPasswordFormData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     setFormData(buildProfileFormData(user));
@@ -53,6 +65,76 @@ function UserProfile() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    // Validation
+    if (!passwordFormData.oldPassword.trim()) {
+      setPasswordError('Please enter your current password');
+      return;
+    }
+
+    if (!passwordFormData.newPassword.trim()) {
+      setPasswordError('Please enter a new password');
+      return;
+    }
+
+    if (passwordFormData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    if (passwordFormData.oldPassword === passwordFormData.newPassword) {
+      setPasswordError('New password must be different from current password');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      // Call API to change password
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          oldPassword: passwordFormData.oldPassword,
+          newPassword: passwordFormData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setPasswordError(data.message || 'Failed to change password');
+        return;
+      }
+
+      setPasswordSuccess('Password changed successfully!');
+      setPasswordFormData({
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      setPasswordError(error.message || 'An error occurred while changing password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const handleToggleEdit = () => {
@@ -185,19 +267,19 @@ function UserProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-cyan-50 to-indigo-100">
       <Navbar />
 
       {/* Profile Header */}
-      <section className="bg-gradient-to-r from-slate-900 to-cyan-800 text-white py-12 px-4">
+      <section className="bg-gradient-to-r from-slate-900 via-indigo-900 to-cyan-800 text-white py-12 px-4">
         <div className="container mx-auto flex items-center gap-8">
-          <div className="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-4xl">
+          <div className="w-24 h-24 bg-gradient-to-br from-pink-400 via-orange-300 to-yellow-300 rounded-full flex items-center justify-center text-4xl text-slate-900 font-bold shadow-xl ring-4 ring-white/40">
             {user.name?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div>
-            <h1 className="text-4xl font-bold">{user.name}</h1>
-            <p className="text-white opacity-90">{user.email}</p>
-            <p className="text-white opacity-75 text-sm">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-100 to-amber-100 bg-clip-text text-transparent">{user.name}</h1>
+            <p className="text-cyan-100 font-medium">{user.email}</p>
+            <p className="text-cyan-200 text-sm">
               Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently joined'}
             </p>
           </div>
@@ -209,14 +291,14 @@ function UserProfile() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-soft sticky top-24">
+              <div className="bg-gradient-to-b from-white via-pink-50 to-orange-50 rounded-xl shadow-xl sticky top-24 border border-pink-100">
                 <div className="p-6 space-y-2">
                   <button
                     onClick={() => setActiveTab('profile')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                       activeTab === 'profile'
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md'
+                        : 'text-slate-700 hover:bg-pink-100'
                     }`}
                   >
                     <FiUser /> Profile
@@ -225,8 +307,8 @@ function UserProfile() {
                     onClick={() => setActiveTab('orders')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                       activeTab === 'orders'
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md'
+                        : 'text-slate-700 hover:bg-indigo-100'
                     }`}
                   >
                     <FiPackage /> Orders
@@ -235,8 +317,8 @@ function UserProfile() {
                     onClick={() => setActiveTab('wishlist')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                       activeTab === 'wishlist'
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white shadow-md'
+                        : 'text-slate-700 hover:bg-fuchsia-100'
                     }`}
                   >
                     <FiHeart /> Wishlist
@@ -245,15 +327,15 @@ function UserProfile() {
                     onClick={() => setActiveTab('settings')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                       activeTab === 'settings'
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow-md'
+                        : 'text-slate-700 hover:bg-cyan-100'
                     }`}
                   >
                     <FiSettings /> Settings
                   </button>
                   <button
                     onClick={logout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition mt-4"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-rose-600 hover:bg-rose-100 transition mt-4"
                   >
                     <FiLogOut /> Logout
                   </button>
@@ -265,12 +347,12 @@ function UserProfile() {
             <div className="lg:col-span-3">
               {/* Profile Tab */}
               {activeTab === 'profile' && (
-                <div className="bg-white rounded-lg shadow-soft p-8">
+                <div className="bg-gradient-to-br from-white via-cyan-50 to-indigo-50 rounded-xl shadow-xl p-8 border border-cyan-100">
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Profile Information</h2>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-700 to-cyan-600 bg-clip-text text-transparent">Profile Information</h2>
                     <button
                       onClick={handleToggleEdit}
-                      className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition"
+                      className="flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-600 hover:text-white transition"
                     >
                       <FiEdit2 size={18} />
                       {isEditing ? 'Cancel' : 'Edit'}
@@ -298,7 +380,7 @@ function UserProfile() {
                           placeholder="Full Name"
                           value={formData.name}
                           onChange={handleInputChange}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                         <input
                           type="email"
@@ -306,7 +388,7 @@ function UserProfile() {
                           placeholder="Email"
                           value={formData.email}
                           onChange={handleInputChange}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                         <input
                           type="tel"
@@ -314,7 +396,7 @@ function UserProfile() {
                           placeholder="Phone"
                           value={formData.phone}
                           onChange={handleInputChange}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                       </div>
                       <input
@@ -323,7 +405,7 @@ function UserProfile() {
                         placeholder="Address"
                         value={formData.address}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input
@@ -332,7 +414,7 @@ function UserProfile() {
                           placeholder="City"
                           value={formData.city}
                           onChange={handleInputChange}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                         <input
                           type="text"
@@ -340,7 +422,7 @@ function UserProfile() {
                           placeholder="State"
                           value={formData.state}
                           onChange={handleInputChange}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                         <input
                           type="text"
@@ -348,46 +430,46 @@ function UserProfile() {
                           placeholder="Zip Code"
                           value={formData.zipcode}
                           onChange={handleInputChange}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="px-4 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={handleSaveProfile}
                         disabled={savingProfile}
-                        className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-700 transition btn-hover-lift"
+                        className="w-full bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 text-white py-3 rounded-lg font-semibold hover:from-indigo-700 hover:via-blue-700 hover:to-cyan-700 transition btn-hover-lift shadow-md"
                       >
                         {savingProfile ? 'Saving...' : 'Save Changes'}
                       </button>
                     </form>
                   ) : (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-3 pb-4 border-b">
-                        <FiUser className="text-primary text-xl" />
+                      <div className="flex items-center gap-3 pb-4 border-b border-indigo-100">
+                        <FiUser className="text-indigo-600 text-xl" />
                         <div>
-                          <p className="text-gray-600 text-sm">Full Name</p>
-                          <p className="font-semibold">{formData.name}</p>
+                          <p className="text-indigo-500 text-sm">Full Name</p>
+                          <p className="font-semibold text-slate-900">{formData.name}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 pb-4 border-b">
-                        <FiMail className="text-primary text-xl" />
+                      <div className="flex items-center gap-3 pb-4 border-b border-indigo-100">
+                        <FiMail className="text-blue-600 text-xl" />
                         <div>
-                          <p className="text-gray-600 text-sm">Email Address</p>
-                          <p className="font-semibold">{formData.email}</p>
+                          <p className="text-blue-500 text-sm">Email Address</p>
+                          <p className="font-semibold text-slate-900">{formData.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 pb-4 border-b">
-                        <FiPhone className="text-primary text-xl" />
+                      <div className="flex items-center gap-3 pb-4 border-b border-indigo-100">
+                        <FiPhone className="text-fuchsia-600 text-xl" />
                         <div>
-                          <p className="text-gray-600 text-sm">Phone Number</p>
-                          <p className="font-semibold">{formData.phone}</p>
+                          <p className="text-fuchsia-500 text-sm">Phone Number</p>
+                          <p className="font-semibold text-slate-900">{formData.phone}</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <FiMapPin className="text-primary text-xl mt-1" />
+                        <FiMapPin className="text-emerald-600 text-xl mt-1" />
                         <div>
-                          <p className="text-gray-600 text-sm">Address</p>
-                          <p className="font-semibold">
+                          <p className="text-emerald-600 text-sm">Address</p>
+                          <p className="font-semibold text-slate-900">
                             {formData.address}<br />
                             {formData.city}, {formData.state} {formData.zipcode}
                           </p>
@@ -400,8 +482,8 @@ function UserProfile() {
 
               {/* Orders Tab */}
               {activeTab === 'orders' && (
-                <div className="bg-white rounded-lg shadow-soft p-8">
-                  <h2 className="text-2xl font-bold mb-6">My Orders</h2>
+                <div className="bg-gradient-to-br from-white via-indigo-50 to-blue-50 rounded-xl shadow-xl p-8 border border-indigo-100">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-700 to-blue-600 bg-clip-text text-transparent mb-6">My Orders</h2>
 
                   {ordersLoading ? (
                     <div className="text-center py-10">
@@ -412,12 +494,12 @@ function UserProfile() {
                       <p className="text-red-600">{ordersError}</p>
                     </div>
                   ) : orders.length === 0 ? (
-                    <div className="text-center py-10 border border-dashed border-gray-300 rounded-lg">
-                      <p className="text-gray-700 font-semibold mb-2">No orders found</p>
-                      <p className="text-gray-500 mb-4 text-sm">Aapne abhi tak koi order place nahi kiya.</p>
+                    <div className="text-center py-10 border border-dashed border-indigo-300 rounded-lg bg-indigo-50/60">
+                      <p className="text-indigo-800 font-semibold mb-2">No orders found</p>
+                      <p className="text-indigo-600 mb-4 text-sm">You have not placed any orders yet.</p>
                       <Link
                         to="/products"
-                        className="inline-block bg-slate-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-slate-700 transition"
+                        className="inline-block bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-blue-700 transition"
                       >
                         Start Shopping
                       </Link>
@@ -425,7 +507,7 @@ function UserProfile() {
                   ) : (
                     <div className="space-y-5">
                       {orders.map((order) => (
-                        <div key={order.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-soft transition">
+                        <div key={order.id} className="border border-indigo-200 rounded-lg p-5 hover:shadow-soft transition bg-white/80 hover:bg-white">
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
                               <p className="font-bold text-lg text-gray-900">Order #{order.id.slice(-8).toUpperCase()}</p>
@@ -443,7 +525,7 @@ function UserProfile() {
 
                               <Link
                                 to={`/order/${order.id}/track`}
-                                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
+                                className="flex items-center gap-2 px-4 py-2 border border-indigo-300 rounded-lg font-semibold text-indigo-700 hover:bg-indigo-50 transition"
                               >
                                 <FiEye /> View Details
                               </Link>
@@ -474,38 +556,125 @@ function UserProfile() {
 
               {/* Wishlist Tab */}
               {activeTab === 'wishlist' && (
-                <div className="bg-white rounded-lg shadow-soft p-8">
-                  <h2 className="text-2xl font-bold mb-6">My Wishlist</h2>
-                  <Link
-                    to="/wishlist"
-                    className="inline-block bg-slate-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-slate-700 transition"
-                  >
-                    View Wishlist
-                  </Link>
+                <div className="bg-gradient-to-br from-white via-fuchsia-50 to-pink-50 rounded-xl shadow-xl p-8 border border-fuchsia-100">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-fuchsia-700 to-pink-600 bg-clip-text text-transparent mb-6">My Wishlist</h2>
+
+                  {wishlistItems.length === 0 ? (
+                    <div className="text-center py-8 border border-dashed border-fuchsia-200 rounded-lg bg-white/70">
+                      <p className="text-fuchsia-800 font-semibold mb-2">Your wishlist is currently empty.</p>
+                      <p className="text-fuchsia-600 text-sm mb-4">Add products using the heart icon and they will appear here.</p>
+                      <Link
+                        to="/products"
+                        className="inline-block bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-fuchsia-700 hover:to-pink-700 transition"
+                      >
+                        Browse Products
+                      </Link>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {wishlistItems.map((item) => (
+                          <div key={item.id} className="relative rounded-xl border border-fuchsia-200 bg-white/85 p-3 shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => removeFromWishlist(item.id)}
+                              aria-label="Remove from wishlist"
+                              title="Remove from wishlist"
+                              className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-500 hover:bg-rose-50 hover:text-rose-600 transition shadow-sm"
+                            >
+                              <FiHeart size={18} className="fill-current" />
+                            </button>
+
+                            <div className="w-full h-36 rounded-lg overflow-hidden bg-fuchsia-50 mb-3">
+                              <img
+                                src={item.image || 'https://via.placeholder.com/300x200'}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <p className="font-semibold text-slate-900 line-clamp-2 mb-1">{item.name}</p>
+                            <p className="text-fuchsia-700 font-bold">INR {Number(item.price || 0).toFixed(2)}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-6">
+                        <Link
+                          to="/wishlist"
+                          className="inline-block bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-fuchsia-700 hover:to-pink-700 transition"
+                        >
+                          Open Full Wishlist
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Settings Tab */}
               {activeTab === 'settings' && (
-                <div className="bg-white rounded-lg shadow-soft p-8">
-                  <h2 className="text-2xl font-bold mb-6">Settings</h2>
-                  <div className="space-y-4">
-                    <label className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input type="checkbox" className="w-4 h-4" defaultChecked />
-                      <span className="font-semibold">Receive email notifications</span>
-                    </label>
-                    <label className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input type="checkbox" className="w-4 h-4" defaultChecked />
-                      <span className="font-semibold">Receive SMS notifications</span>
-                    </label>
-                    <label className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input type="checkbox" className="w-4 h-4" />
-                      <span className="font-semibold">Subscribe to newsletter</span>
-                    </label>
-                    <button className="w-full bg-slate-900 text-white py-2 rounded-lg font-semibold hover:bg-slate-700 transition mt-6">
-                      Save Settings
+                <div className="bg-gradient-to-br from-white via-violet-50 to-purple-50 rounded-xl shadow-xl p-8 border border-violet-100">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-700 to-purple-600 bg-clip-text text-transparent mb-8">Change Password</h2>
+                  
+                  {passwordError && (
+                    <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                      {passwordError}
+                    </div>
+                  )}
+
+                  {passwordSuccess && (
+                    <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                      {passwordSuccess}
+                    </div>
+                  )}
+
+                  <form className="space-y-5">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Current Password</label>
+                      <input
+                        type="password"
+                        name="oldPassword"
+                        value={passwordFormData.oldPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter your current password"
+                        className="w-full px-4 py-3 border-2 border-violet-200 rounded-lg focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-300/50 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">New Password</label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={passwordFormData.newPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter your new password"
+                        className="w-full px-4 py-3 border-2 border-violet-200 rounded-lg focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-300/50 transition"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Minimum 6 characters required</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Confirm New Password</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={passwordFormData.confirmPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Confirm your new password"
+                        className="w-full px-4 py-3 border-2 border-violet-200 rounded-lg focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-300/50 transition"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white py-3 rounded-lg font-bold hover:from-violet-700 hover:to-purple-700 transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {changingPassword ? 'Changing Password...' : 'Change Password'}
                     </button>
-                  </div>
+                  </form>
                 </div>
               )}
             </div>

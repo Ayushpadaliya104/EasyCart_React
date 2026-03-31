@@ -14,6 +14,7 @@ const cartRoutes = require('./routes/cart.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const settingsRoutes = require('./routes/settings.routes');
 const paymentRoutes = require('./routes/payment.routes');
+const queryRoutes = require('./routes/query.routes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/queries', queryRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({

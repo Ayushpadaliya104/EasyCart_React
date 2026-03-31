@@ -72,12 +72,6 @@ export const mockProducts = [
     discount: 33,
     image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=500&h=500&fit=crop',
     category: 'Accessories',
-    images: [
-      'https://images.unsplash.com/photo-1618306479f46-37ee66b33b97?w=500&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1618306479f46-37ee66b33b97?w=500&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1618306479f46-37ee66b33b97?w=500&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1618306479f46-37ee66b33b97?w=500&h=500&fit=crop',
-    ],
     description: 'High-capacity portable charger for all devices',
     details: ['20000mAh capacity', 'Fast charging', 'Multi-port', 'Compact design'],
   },
@@ -136,12 +130,6 @@ export const mockProducts = [
     image: 'https://images.unsplash.com/photo-1587829191301-2da2f2faa01d?w=500&h=500&fit=crop',
     category: 'Electronics',
     description: 'Professional mechanical gaming keyboard with RGB lighting',
-    images: [
-      'https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&h=500&fit=crop',
-    ],
     details: ['RGB backlighting', 'Mechanical switches', 'Programmable keys', 'Wireless & wired'],
   },
   {
