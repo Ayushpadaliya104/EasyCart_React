@@ -8,6 +8,8 @@ function AdminDashboard() {
   const [analytics, setAnalytics] = useState({
     stats: {
       totalSales: 0,
+      totalRefunds: 0,
+      netRevenue: 0,
       totalOrders: 0,
       totalUsers: 0,
       totalRevenue: 0,
@@ -60,7 +62,7 @@ function AdminDashboard() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 mb-6">
         <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -112,14 +114,29 @@ function AdminDashboard() {
         <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-500 text-sm font-medium">Total Revenue</p>
+              <p className="text-slate-500 text-sm font-medium">Net Revenue</p>
               <p className="text-3xl font-bold mt-2 text-slate-900">
-                {loading ? '...' : `₹${analytics.stats.totalRevenue.toLocaleString()}`}
+                {loading ? '...' : `₹${analytics.stats.netRevenue.toLocaleString()}`}
               </p>
               <p className="text-slate-500 text-sm mt-2">Year to date</p>
             </div>
             <div className="bg-slate-100 p-3 rounded-2xl">
               <FiBarChart2 className="text-slate-700 text-2xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-500 text-sm font-medium">Total Refunds</p>
+              <p className="text-3xl font-bold mt-2 text-rose-600">
+                {loading ? '...' : `₹${analytics.stats.totalRefunds.toLocaleString()}`}
+              </p>
+              <p className="text-slate-500 text-sm mt-2">All processed refunds</p>
+            </div>
+            <div className="bg-rose-50 p-3 rounded-2xl">
+              <FiTrendingUp className="text-rose-600 text-2xl" />
             </div>
           </div>
         </div>

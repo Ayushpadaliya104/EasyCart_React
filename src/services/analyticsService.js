@@ -3,6 +3,8 @@ import apiClient from './apiClient';
 const normalizeMonthly = (entry) => ({
   month: entry.month,
   sales: Number(entry.sales || 0),
+  refunds: Number(entry.refunds || 0),
+  netRevenue: Number(entry.netRevenue || 0),
   orders: Number(entry.orders || 0)
 });
 
@@ -18,6 +20,8 @@ export const fetchDashboardAnalyticsApi = async () => {
   return {
     stats: {
       totalSales: Number(data.stats?.totalSales || 0),
+      totalRefunds: Number(data.stats?.totalRefunds || 0),
+      netRevenue: Number(data.stats?.netRevenue || 0),
       totalOrders: Number(data.stats?.totalOrders || 0),
       totalUsers: Number(data.stats?.totalUsers || 0),
       totalRevenue: Number(data.stats?.totalRevenue || 0),
@@ -42,6 +46,8 @@ export const fetchSalesReportsApi = async (range = '6m') => {
     months: Number(data.months || 0),
     summary: {
       totalSales: Number(data.summary?.totalSales || 0),
+      totalRefunds: Number(data.summary?.totalRefunds || 0),
+      netRevenue: Number(data.summary?.netRevenue || 0),
       totalOrders: Number(data.summary?.totalOrders || 0),
       averageOrderValue: Number(data.summary?.averageOrderValue || 0)
     },

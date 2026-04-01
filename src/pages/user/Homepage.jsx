@@ -14,14 +14,55 @@ import {
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import ProductCard from '../../components/ProductCard';
-import { mockProducts, mockCategories } from '../../utils/mockData';
+import { fetchCategories, fetchProducts, fetchTrendingProducts } from '../../services/productService';
 import { useStoreSettings } from '../../context/StoreSettingsContext';
 
 function Homepage() {
   const { settings } = useStoreSettings();
-  const heroProduct = mockProducts[1] || mockProducts[0];
-  const featuredProducts = mockProducts.slice(0, 6);
-  const trendingProducts = mockProducts.slice(6, 10);
+  const [categories, setCategories] = React.useState([]);
+  const [featuredProducts, setFeaturedProducts] = React.useState([]);
+  const [trendingProducts, setTrendingProducts] = React.useState([]);
+  const [productCount, setProductCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const loadHomepageData = async () => {
+      try {
+        const [categoryData, featuredData, trendingData] = await Promise.all([
+          fetchCategories(),
+          fetchProducts({ limit: 6, sortBy: 'newest' }),
+          fetchTrendingProducts(10)
+        ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        setCategories(Array.isArray(categoryData) ? categoryData : []);
+        setFeaturedProducts(Array.isArray(featuredData.products) ? featuredData.products : []);
+        setTrendingProducts(Array.isArray(trendingData.products) ? trendingData.products : []);
+        setProductCount(Number(featuredData.total || featuredData.count || 0));
+      } catch (error) {
+        // Keep sections render-safe if one of the APIs fails.
+        if (!mounted) {
+          return;
+        }
+        setCategories([]);
+        setFeaturedProducts([]);
+        setTrendingProducts([]);
+        setProductCount(0);
+      }
+    };
+
+    loadHomepageData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const heroProduct = featuredProducts[0] || null;
 
   return (
     <div className="min-h-screen bg-[#eef2f7]">
@@ -65,7 +106,7 @@ function Homepage() {
               <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-3">
                   <p className="text-xs text-slate-300">Products</p>
-                  <p className="text-xl font-bold">1000+</p>
+                  <p className="text-xl font-bold">{productCount > 0 ? `${productCount}+` : '0'}</p>
                 </div>
                 <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-3">
                   <p className="text-xs text-slate-300">Support</p>
@@ -81,26 +122,26 @@ function Homepage() {
 
           <Link
             to={heroProduct ? `/product/${heroProduct.id}` : '/products'}
-            className="group overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm"
+            className="group h-full overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm"
           >
             <div className="h-full grid grid-rows-[1fr_auto]">
               <div className="relative min-h-[320px] bg-slate-100 overflow-hidden">
                 <img
                   src={heroProduct?.image || 'https://via.placeholder.com/600'}
                   alt={heroProduct?.name || 'Featured product'}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  className="w-full h-full object-contain p-3 group-hover:scale-105 transition duration-500"
                 />
                 <span className="absolute top-4 left-4 rounded-lg bg-black/70 text-white px-3 py-1 text-xs uppercase tracking-wide">
                   Editor Pick
                 </span>
               </div>
-              <div className="p-6">
+              <div className="p-4 md:p-5">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Limited Offer</p>
-                <h3 className="mt-2 text-2xl font-bold text-slate-900 line-clamp-2">{heroProduct?.name || 'Featured Item'}</h3>
-                <div className="mt-4 flex items-center justify-between">
+                <h3 className="mt-1 text-xl font-bold text-slate-900 line-clamp-2">{heroProduct?.name || 'Featured Item'}</h3>
+                <div className="mt-2 flex items-center justify-between">
                   <div>
                     <p className="text-slate-500 text-sm">Starting at</p>
-                    <p className="text-2xl font-bold text-slate-900">₹{Number(heroProduct?.price || 0).toFixed(2)}</p>
+                    <p className="text-xl font-bold text-slate-900">₹{Number(heroProduct?.price || 0).toFixed(2)}</p>
                   </div>
                   <span className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 font-semibold">
                     View <FiArrowRight />
@@ -149,7 +190,7 @@ function Homepage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-            {mockCategories.map((category) => (
+            {categories.map((category) => (
               <Link key={category.id} to={`/products?category=${category.slug}`}>
                 <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:shadow-md transition p-5">
                   <div className="w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center text-2xl mb-4">
@@ -159,6 +200,9 @@ function Homepage() {
                 </div>
               </Link>
             ))}
+            {categories.length === 0 && (
+              <p className="col-span-full text-slate-500">No categories available right now.</p>
+            )}
           </div>
         </div>
       </section>
@@ -166,64 +210,62 @@ function Homepage() {
       <section className="px-4 py-10">
         <div className="max-w-[1500px] mx-auto">
           <div className="flex justify-between items-center mb-7">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Featured Products</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Trending Right Now</h2>
             <Link to="/products" className="text-slate-900 font-semibold hover:gap-2 flex items-center gap-1 transition">
               View All <FiArrowRight />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredProducts.map((product) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {trendingProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
+            {trendingProducts.length === 0 && (
+              <p className="col-span-full text-slate-500">No trending products yet.</p>
+            )}
           </div>
         </div>
       </section>
 
       <section className="px-4 pb-10">
-        <div className="max-w-[1500px] mx-auto grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-slate-900">Trending Right Now</h2>
-              <Link to="/products" className="text-slate-900 font-semibold hover:gap-2 flex items-center gap-1 transition">
-                Explore <FiArrowRight />
-              </Link>
+        <div className="max-w-[1500px] mx-auto grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">
+          <div className="rounded-3xl border border-slate-200 bg-slate-900 text-white p-6 md:p-8">
+            <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Exclusive Access</p>
+            <h3 className="text-3xl font-bold mt-2">Join {settings.storeName} Alerts</h3>
+            <p className="text-slate-200 text-sm mt-3 max-w-2xl">Get launch notifications, curated deals, and weekly top picks before everyone else.</p>
+
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-3 text-sm flex items-center gap-2"><FiTag /> Private discounts</div>
+              <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-3 text-sm flex items-center gap-2"><FiClock /> Early restock alerts</div>
+              <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-3 text-sm flex items-center gap-2"><FiStar /> Member-only bundles</div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {trendingProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 placeholder:text-slate-300 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              />
+              <button className="rounded-xl bg-white text-slate-900 px-6 py-3 font-semibold hover:bg-slate-100 transition">
+                Subscribe Now
+              </button>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-3xl border border-slate-200 bg-slate-900 text-white p-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-cyan-300">Exclusive Access</p>
-              <h3 className="text-2xl font-bold mt-2">Join {settings.storeName} Alerts</h3>
-              <p className="text-slate-200 text-sm mt-3">Get launch notifications, curated deals, and weekly top picks before everyone else.</p>
-
-              <div className="mt-4 space-y-3">
-                <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-sm flex items-center gap-2"><FiTag /> Private discounts</div>
-                <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-sm flex items-center gap-2"><FiClock /> Early restock alerts</div>
-                <div className="rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-sm flex items-center gap-2"><FiStar /> Member-only bundles</div>
-              </div>
-
-              <div className="mt-5 flex flex-col gap-3">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 placeholder:text-slate-300 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                />
-                <button className="w-full rounded-xl bg-white text-slate-900 py-3 font-semibold hover:bg-slate-100 transition">
-                  Subscribe Now
-                </button>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
             <div className="rounded-3xl border border-slate-200 bg-white p-6">
               <h4 className="font-bold text-slate-900 flex items-center gap-2"><FiRefreshCw /> Easy Returns</h4>
               <p className="text-sm text-slate-600 mt-2">Changed your mind? We keep returns simple and stress-free.</p>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+              <h4 className="font-bold text-slate-900 flex items-center gap-2"><FiShield /> Secure Checkout</h4>
+              <p className="text-sm text-slate-600 mt-2">Every order is protected with trusted payments and verified support.</p>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:col-span-2 xl:col-span-1">
+              <h4 className="font-bold text-slate-900 flex items-center gap-2"><FiHeadphones /> Need Help?</h4>
+              <p className="text-sm text-slate-600 mt-2">Contact us at {settings.email} or call {settings.phone} for quick assistance.</p>
             </div>
           </div>
         </div>

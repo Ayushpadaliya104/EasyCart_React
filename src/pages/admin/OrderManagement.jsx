@@ -53,8 +53,27 @@ function OrderManagement() {
       case 'Processing': return 'bg-blue-100 text-blue-800';
       case 'Shipped': return 'bg-purple-100 text-purple-800';
       case 'Delivered': return 'bg-green-100 text-green-800';
+      case 'Partially Returned': return 'bg-orange-100 text-orange-800';
+      case 'Returned / Refunded': return 'bg-emerald-100 text-emerald-800';
       case 'Cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getReturnStatusColor = (status) => {
+    switch (status) {
+      case 'Requested':
+        return 'bg-amber-100 text-amber-800';
+      case 'Approved':
+        return 'bg-blue-100 text-blue-800';
+      case 'Rejected':
+        return 'bg-rose-100 text-rose-800';
+      case 'Picked':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Refunded':
+        return 'bg-emerald-100 text-emerald-800';
+      default:
+        return 'bg-slate-100 text-slate-700';
     }
   };
 
@@ -304,17 +323,18 @@ function OrderManagement() {
               <th className="px-6 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Total</th>
               <th className="px-6 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Date</th>
               <th className="px-6 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Status</th>
+              <th className="px-6 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Returns</th>
               <th className="px-6 py-3 text-left text-xs uppercase tracking-wide text-slate-500">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td className="px-6 py-8 text-center text-slate-500" colSpan={6}>Loading orders...</td>
+                    <td className="px-6 py-8 text-center text-slate-500" colSpan={7}>Loading orders...</td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td className="px-6 py-8 text-center text-rose-600" colSpan={6}>{error}</td>
+                    <td className="px-6 py-8 text-center text-rose-600" colSpan={7}>{error}</td>
                   </tr>
                 ) : filteredOrders.map(order => (
               <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
@@ -326,6 +346,15 @@ function OrderManagement() {
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
                         {order.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-700">
+                      {(order.returnRequests || []).length > 0 ? (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                          {(order.returnRequests || []).length} request(s)
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">None</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex gap-2">
@@ -455,6 +484,43 @@ function OrderManagement() {
                       </div>
                     ))}
                   </div>
+                </section>
+
+                <section>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-3">Return Requests</h3>
+                  {(detailsOrder.returnRequests || []).length === 0 ? (
+                    <p className="text-sm text-slate-500">No return requests submitted for this order.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {(detailsOrder.returnRequests || []).map((request) => (
+                        <div key={request.id} className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-slate-900">{request.reasonCategory}</p>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getReturnStatusColor(request.status)}`}>
+                              {request.status}
+                            </span>
+                          </div>
+                          <div className="mt-2 space-y-1">
+                            {(request.returnItems || []).map((item) => (
+                              <p key={`${request.id}-${item.orderItemId}`} className="text-xs text-slate-700">
+                                {item.productTitle} x{item.quantity}
+                              </p>
+                            ))}
+                          </div>
+                          {request.comment && <p className="text-sm text-slate-700 mt-1"><span className="font-semibold">Comment:</span> {request.comment}</p>}
+                          <p className="text-xs text-slate-600 mt-1">Refund: INR {Number(request.refundAmount || 0).toFixed(2)} ({request.refundStatus})</p>
+                          <p className="text-xs text-slate-500 mt-1">Requested on {request.createdAt ? new Date(request.createdAt).toLocaleString() : 'N/A'}</p>
+                          {request.image && (
+                            <img
+                              src={request.image}
+                              alt="Returned product"
+                              className="mt-3 w-24 h-24 rounded-lg object-cover border border-slate-200"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
             )}

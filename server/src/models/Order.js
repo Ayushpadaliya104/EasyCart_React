@@ -25,9 +25,13 @@ const orderItemSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1
+    },
+    itemStatus: {
+      type: String,
+      enum: ['Pending Delivery', 'Delivered', 'Return Requested', 'Returned / Refunded'],
+      default: 'Pending Delivery'
     }
-  },
-  { _id: false }
+  }
 );
 
 const shippingAddressSchema = new mongoose.Schema(
@@ -42,6 +46,116 @@ const shippingAddressSchema = new mongoose.Schema(
     zipcode: { type: String, required: true, trim: true }
   },
   { _id: false }
+);
+
+const returnRequestSchema = new mongoose.Schema(
+  {
+    returnItems: {
+      type: [
+        new mongoose.Schema(
+          {
+            orderItemId: {
+              type: mongoose.Schema.Types.ObjectId,
+              required: true
+            },
+            product: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: 'Product',
+              required: true
+            },
+            productTitle: {
+              type: String,
+              required: true,
+              trim: true
+            },
+            quantity: {
+              type: Number,
+              required: true,
+              min: 1
+            },
+            unitPrice: {
+              type: Number,
+              required: true,
+              min: 0
+            },
+            lineTotal: {
+              type: Number,
+              required: true,
+              min: 0
+            }
+          },
+          { _id: false }
+        )
+      ],
+      default: []
+    },
+    reasonCategory: {
+      type: String,
+      enum: ['Damaged', 'Wrong item', 'Not satisfied', 'Other'],
+      required: true
+    },
+    comment: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    image: {
+      type: String,
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['Requested', 'Approved', 'Rejected', 'Picked', 'Refunded'],
+      default: 'Requested'
+    },
+    refundAmount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    refundStatus: {
+      type: String,
+      enum: ['Pending', 'Processed', 'Rejected'],
+      default: 'Pending'
+    },
+    refundedAt: {
+      type: Date,
+      default: null
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: true }
+);
+
+const refundHistorySchema = new mongoose.Schema(
+  {
+    returnRequestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    status: {
+      type: String,
+      enum: ['Refunded'],
+      default: 'Refunded'
+    },
+    processedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  { _id: true }
 );
 
 const orderSchema = new mongoose.Schema(
@@ -69,8 +183,34 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
+      enum: [
+        'Pending',
+        'Processing',
+        'Shipped',
+        'Out for Delivery',
+        'Delivered',
+        'Partially Returned',
+        'Returned / Refunded',
+        'Cancelled'
+      ],
       default: 'Pending'
+    },
+    deliveredAt: {
+      type: Date,
+      default: null
+    },
+    returnRequests: {
+      type: [returnRequestSchema],
+      default: []
+    },
+    refundHistory: {
+      type: [refundHistorySchema],
+      default: []
+    },
+    totalRefunded: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     subtotal: {
       type: Number,

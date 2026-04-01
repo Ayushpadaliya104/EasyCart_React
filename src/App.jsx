@@ -14,6 +14,7 @@ import Cart from './pages/user/Cart';
 import Checkout from './pages/user/Checkout';
 import Orders from './pages/user/Orders';
 import OrderTracking from './pages/user/OrderTracking';
+import ReturnHistory from './pages/user/ReturnHistory';
 import Login from './pages/user/Login';
 import Register from './pages/user/Register';
 import Wishlist from './pages/user/Wishlist';
@@ -25,6 +26,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ProductManagement from './pages/admin/ProductManagement';
 import CategoryManagement from './pages/admin/CategoryManagement';
 import OrderManagement from './pages/admin/OrderManagement';
+import ReturnManagement from './pages/admin/ReturnManagement';
 import UserManagement from './pages/admin/UserManagement';
 import Reports from './pages/admin/Reports';
 import AdminSettings from './pages/admin/AdminSettings';
@@ -57,6 +59,7 @@ function App() {
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/order/:id/track" element={<OrderTracking />} />
+                <Route path="/returns" element={<ReturnHistory />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/wishlist" element={<Wishlist />} />
@@ -68,6 +71,7 @@ function App() {
                 <Route path="/admin/products" element={<AdminRoute><ProductManagement /></AdminRoute>} />
                 <Route path="/admin/categories" element={<AdminRoute><CategoryManagement /></AdminRoute>} />
                 <Route path="/admin/orders" element={<AdminRoute><OrderManagement /></AdminRoute>} />
+                <Route path="/admin/returns" element={<AdminRoute><ReturnManagement /></AdminRoute>} />
                 <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
                 <Route path="/admin/reports" element={<AdminRoute><Reports /></AdminRoute>} />
                 <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />

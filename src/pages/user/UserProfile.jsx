@@ -4,8 +4,9 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { useWishlist } from '../../context/WishlistContext';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings, FiEye, FiClock, FiTruck, FiCheckCircle, FiBell } from 'react-icons/fi';
-import { fetchMyOrdersApi } from '../../services/orderService';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings, FiEye, FiClock, FiTruck, FiCheckCircle, FiBell, FiRefreshCw } from 'react-icons/fi';
+import { fetchMyOrdersApi, submitReturnRequestApi } from '../../services/orderService';
+import { changePasswordApi } from '../../services/userService';
 
 const splitName = (name = '') => {
   const trimmedName = String(name).trim();
@@ -43,6 +44,16 @@ function UserProfile() {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState('');
+  const [returnOrder, setReturnOrder] = useState(null);
+  const [returnForm, setReturnForm] = useState({
+    itemIds: [],
+    reasonCategory: 'Damaged',
+    comment: '',
+    image: ''
+  });
+  const [returnError, setReturnError] = useState('');
+  const [returnSuccess, setReturnSuccess] = useState('');
+  const [submittingReturn, setSubmittingReturn] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -104,25 +115,10 @@ function UserProfile() {
 
     try {
       setChangingPassword(true);
-      // Call API to change password
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/auth/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          oldPassword: passwordFormData.oldPassword,
-          newPassword: passwordFormData.newPassword
-        })
+      await changePasswordApi({
+        oldPassword: passwordFormData.oldPassword,
+        newPassword: passwordFormData.newPassword
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setPasswordError(data.message || 'Failed to change password');
-        return;
-      }
 
       setPasswordSuccess('Password changed successfully!');
       setPasswordFormData({
@@ -131,7 +127,7 @@ function UserProfile() {
         confirmPassword: ''
       });
     } catch (error) {
-      setPasswordError(error.message || 'An error occurred while changing password');
+      setPasswordError(error?.response?.data?.message || error.message || 'An error occurred while changing password');
     } finally {
       setChangingPassword(false);
     }
@@ -233,6 +229,10 @@ function UserProfile() {
         return 'bg-purple-100 text-purple-800';
       case 'Delivered':
         return 'bg-green-100 text-green-800';
+      case 'Partially Returned':
+        return 'bg-orange-100 text-orange-800';
+      case 'Returned / Refunded':
+        return 'bg-emerald-100 text-emerald-800';
       case 'Cancelled':
         return 'bg-red-100 text-red-800';
       default:
@@ -251,6 +251,85 @@ function UserProfile() {
         return <FiCheckCircle className="inline mr-1" />;
       default:
         return <FiBell className="inline mr-1" />;
+    }
+  };
+
+  const getEligibleItemsForReturn = (order) => {
+    return (order.items || []).filter((item) => item.itemStatus === 'Delivered');
+  };
+
+  const openReturnModal = (order) => {
+    const eligibleProducts = getEligibleItemsForReturn(order);
+
+    if (eligibleProducts.length === 0) {
+      setReturnError('Return request already submitted for all products in this order.');
+      setReturnSuccess('');
+      return;
+    }
+
+    setReturnOrder(order);
+    setReturnForm({
+      itemIds: [String(eligibleProducts[0].id || '')],
+      reasonCategory: 'Damaged',
+      comment: '',
+      image: ''
+    });
+    setReturnError('');
+    setReturnSuccess('');
+  };
+
+  const closeReturnModal = () => {
+    setReturnOrder(null);
+    setReturnForm({ itemIds: [], reasonCategory: 'Damaged', comment: '', image: '' });
+    setReturnError('');
+  };
+
+  const handleReturnImageUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReturnForm((prev) => ({ ...prev, image: String(reader.result || '') }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const submitReturnRequest = async () => {
+    if (!returnOrder) {
+      return;
+    }
+
+    if (!Array.isArray(returnForm.itemIds) || returnForm.itemIds.length === 0) {
+      setReturnError('Please select at least one item to return.');
+      return;
+    }
+
+    if (!returnForm.image) {
+      setReturnError('Please upload received product photo.');
+      return;
+    }
+
+    try {
+      setSubmittingReturn(true);
+      setReturnError('');
+
+      const updatedOrder = await submitReturnRequestApi(returnOrder.id, {
+        itemIds: returnForm.itemIds,
+        reasonCategory: returnForm.reasonCategory,
+        comment: returnForm.comment.trim(),
+        image: returnForm.image
+      });
+
+      setOrders((prev) => prev.map((order) => (order.id === updatedOrder.id ? updatedOrder : order)));
+      setReturnSuccess('Return request submitted successfully.');
+      closeReturnModal();
+    } catch (submitError) {
+      setReturnError(submitError?.response?.data?.message || 'Failed to submit return request');
+    } finally {
+      setSubmittingReturn(false);
     }
   };
 
@@ -323,6 +402,12 @@ function UserProfile() {
                   >
                     <FiHeart /> Wishlist
                   </button>
+                  <Link
+                    to="/returns"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition text-slate-700 hover:bg-blue-100"
+                  >
+                    <FiRefreshCw /> Returns
+                  </Link>
                   <button
                     onClick={() => setActiveTab('settings')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
@@ -485,6 +570,18 @@ function UserProfile() {
                 <div className="bg-gradient-to-br from-white via-indigo-50 to-blue-50 rounded-xl shadow-xl p-8 border border-indigo-100">
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-700 to-blue-600 bg-clip-text text-transparent mb-6">My Orders</h2>
 
+                  {returnSuccess && (
+                    <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                      {returnSuccess}
+                    </p>
+                  )}
+
+                  {returnError && !returnOrder && (
+                    <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+                      {returnError}
+                    </p>
+                  )}
+
                   {ordersLoading ? (
                     <div className="text-center py-10">
                       <p className="text-gray-600">Loading orders...</p>
@@ -529,20 +626,45 @@ function UserProfile() {
                               >
                                 <FiEye /> View Details
                               </Link>
+
+                              {order.eligibleReturnItems?.length > 0 ? (
+                                <button
+                                  onClick={() => openReturnModal(order)}
+                                  className="px-4 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 transition"
+                                >
+                                  Request Return
+                                </button>
+                              ) : ['Delivered', 'Partially Returned'].includes(order.status) ? (
+                                <button
+                                  disabled
+                                  title="Return request is allowed only within 7 days after delivery"
+                                  className="px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 cursor-not-allowed"
+                                >
+                                  Return Window Expired
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  title="Return option will be available after order is delivered"
+                                  className="px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 cursor-not-allowed"
+                                >
+                                  Return After Delivery
+                                </button>
+                              )}
                             </div>
                           </div>
 
                           <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-                            {order.products.slice(0, 4).map((product, idx) => (
-                              <div key={idx} className="flex-shrink-0 text-center w-20">
-                                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-md overflow-hidden mb-1">
-                                  {product.image ? (
-                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">N/A</div>
-                                  )}
+                            {order.items.slice(0, 6).map((item) => (
+                              <div key={item.id} className="flex-shrink-0 text-center w-20">
+                                <div className="w-16 h-16 mx-auto bg-white rounded-md overflow-hidden border border-indigo-200 mb-1">
+                                  <img
+                                    src={item.image || 'https://via.placeholder.com/100'}
+                                    alt={item.title}
+                                    className="w-full h-full object-cover"
+                                  />
                                 </div>
-                                <p className="text-[11px] font-semibold line-clamp-2">{product.name}</p>
+                                <p className="text-[11px] font-semibold line-clamp-2 text-slate-900">{item.title}</p>
                               </div>
                             ))}
                           </div>
@@ -675,6 +797,102 @@ function UserProfile() {
                       {changingPassword ? 'Changing Password...' : 'Change Password'}
                     </button>
                   </form>
+                </div>
+              )}
+
+              {returnOrder && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-lg max-w-xl w-full p-6 border border-rose-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-slate-900">Request Return</h2>
+                      <button onClick={closeReturnModal} className="p-2 rounded-lg hover:bg-slate-100">
+                        X
+                      </button>
+                    </div>
+
+                    {returnError && (
+                      <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                        {returnError}
+                      </p>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Select Items</label>
+                        <div className="max-h-40 overflow-y-auto border border-slate-300 rounded-lg p-2 space-y-2">
+                          {getEligibleItemsForReturn(returnOrder).map((item) => {
+                            const checked = returnForm.itemIds.includes(String(item.id));
+                            return (
+                              <label key={item.id} className="flex items-center gap-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(event) => {
+                                    setReturnForm((prev) => {
+                                      const targetId = String(item.id);
+                                      return {
+                                        ...prev,
+                                        itemIds: event.target.checked
+                                          ? [...prev.itemIds, targetId]
+                                          : prev.itemIds.filter((id) => id !== targetId)
+                                      };
+                                    });
+                                  }}
+                                />
+                                <span>{item.title} x{item.quantity}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Reason</label>
+                        <select
+                          value={returnForm.reasonCategory}
+                          onChange={(event) => setReturnForm((prev) => ({ ...prev, reasonCategory: event.target.value }))}
+                          className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                        >
+                          <option value="Damaged">Damaged</option>
+                          <option value="Wrong item">Wrong item</option>
+                          <option value="Not satisfied">Not satisfied</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Comment (Optional)</label>
+                        <textarea
+                          value={returnForm.comment}
+                          onChange={(event) => setReturnForm((prev) => ({ ...prev, comment: event.target.value }))}
+                          rows={3}
+                          placeholder="Extra details about your return"
+                          className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">Received Product Photo</label>
+                        <input type="file" accept="image/*" onChange={handleReturnImageUpload} className="w-full" />
+                        {returnForm.image && (
+                          <img src={returnForm.image} alt="Return preview" className="mt-2 w-28 h-28 object-cover rounded-lg border border-slate-200" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex gap-3">
+                      <button onClick={closeReturnModal} className="flex-1 border border-slate-300 px-4 py-2 rounded-lg font-semibold text-slate-700 hover:bg-slate-50">
+                        Cancel
+                      </button>
+                      <button
+                        onClick={submitReturnRequest}
+                        disabled={submittingReturn}
+                        className="flex-1 bg-rose-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-rose-700 disabled:opacity-60"
+                      >
+                        {submittingReturn ? 'Submitting...' : 'Submit Return'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

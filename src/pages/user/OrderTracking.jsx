@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { FiTruck, FiMapPin, FiPhone, FiMail, FiCheckCircle, FiClock, FiDownload } from 'react-icons/fi';
-import { fetchOrderByIdApi } from '../../services/orderService';
+import { fetchOrderByIdApi, submitReturnRequestApi } from '../../services/orderService';
 import { useAuth } from '../../context/AuthContext';
 import { useStoreSettings } from '../../context/StoreSettingsContext';
 
@@ -15,6 +15,15 @@ function OrderTracking() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [returnForm, setReturnForm] = useState({
+    itemIds: [],
+    reasonCategory: 'Damaged',
+    comment: '',
+    image: ''
+  });
+  const [returnError, setReturnError] = useState('');
+  const [returnSuccess, setReturnSuccess] = useState('');
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -37,6 +46,21 @@ function OrderTracking() {
 
     loadOrder();
   }, [id, navigate, user]);
+
+  useEffect(() => {
+    if (!order || !order.canRequestReturn) {
+      return;
+    }
+
+    const eligibleProducts = (order.items || []).filter((item) => item.itemStatus === 'Delivered');
+
+    if (returnForm.itemIds.length === 0 && eligibleProducts[0]?.id) {
+      setReturnForm((prev) => ({
+        ...prev,
+        itemIds: [String(eligibleProducts[0].id)]
+      }));
+    }
+  }, [order, returnForm.itemIds.length]);
 
   if (loading) {
     return (
@@ -65,11 +89,89 @@ function OrderTracking() {
     );
   }
 
+  const getEligibleItemsForReturn = () => {
+    return (order.items || []).filter((item) => item.itemStatus === 'Delivered');
+  };
+
+  const handleReturnImageUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReturnForm((prev) => ({ ...prev, image: String(reader.result || '') }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const submitReturnRequest = async () => {
+    if (!Array.isArray(returnForm.itemIds) || returnForm.itemIds.length === 0) {
+      setReturnError('Please select at least one item to return.');
+      return;
+    }
+
+    if (!returnForm.image) {
+      setReturnError('Please upload received product photo.');
+      return;
+    }
+
+    try {
+      setSubmittingReturn(true);
+      setReturnError('');
+
+      const updatedOrder = await submitReturnRequestApi(order.id, {
+        itemIds: returnForm.itemIds,
+        reasonCategory: returnForm.reasonCategory,
+        comment: returnForm.comment.trim(),
+        image: returnForm.image
+      });
+
+      setOrder(updatedOrder);
+      const eligibleProducts = (updatedOrder.items || []).filter((item) => item.itemStatus === 'Delivered');
+      setReturnForm({
+        itemIds: eligibleProducts[0] ? [String(eligibleProducts[0].id)] : [],
+        reasonCategory: 'Damaged',
+        comment: '',
+        image: ''
+      });
+      setReturnSuccess('Return request submitted successfully.');
+    } catch (submitError) {
+      setReturnError(submitError?.response?.data?.message || 'Failed to submit return request');
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
   const getStatusBadgeColor = () => {
     if (order.status === 'Delivered') return 'bg-gradient-to-r from-green-300 to-emerald-400 text-green-900 font-bold shadow-md';
+    if (order.status === 'Partially Returned') return 'bg-gradient-to-r from-amber-300 to-orange-400 text-orange-900 font-bold shadow-md';
+    if (order.status === 'Returned / Refunded') return 'bg-gradient-to-r from-emerald-300 to-teal-400 text-emerald-900 font-bold shadow-md';
     if (order.status === 'Shipped' || order.status === 'Out for Delivery') return 'bg-gradient-to-r from-blue-300 to-cyan-400 text-blue-900 font-bold shadow-md';
     if (order.status === 'Processing') return 'bg-gradient-to-r from-indigo-300 to-purple-400 text-indigo-900 font-bold shadow-md';
     return 'bg-gradient-to-r from-orange-300 to-amber-400 text-orange-900 font-bold shadow-md';
+  };
+
+  const deliveryTimeline = (order.timeline || []).filter((step) =>
+    ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'].includes(step.status)
+  );
+
+  const getReturnStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'Requested':
+        return 'bg-amber-100 text-amber-800';
+      case 'Approved':
+        return 'bg-blue-100 text-blue-800';
+      case 'Picked':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Refunded':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-rose-100 text-rose-800';
+      default:
+        return 'bg-slate-100 text-slate-700';
+    }
   };
 
   const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
@@ -311,11 +413,13 @@ function OrderTracking() {
 
               {/* Completed Line */}
               <div className="absolute top-8 left-0 h-2 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 z-0 rounded-full" style={{
-                width: `${(order.timeline.filter(t => t.completed).length / order.timeline.length) * 100}%`
+                width: `${deliveryTimeline.length > 0
+                  ? (deliveryTimeline.filter((t) => t.completed).length / deliveryTimeline.length) * 100
+                  : 0}%`
               }}></div>
 
               {/* Timeline Steps */}
-              {order.timeline.map((step, idx) => (
+              {deliveryTimeline.map((step, idx) => (
                 <div key={idx} className="flex flex-col items-center relative z-10">
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-lg transition shadow-lg ${
                     step.completed 
@@ -336,24 +440,26 @@ function OrderTracking() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             {/* Items Section */}
             <div className="lg:col-span-2 bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 rounded-xl shadow-lg p-8 border-2 border-orange-200">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">ITEMS ({order.products.length})</h3>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">ITEMS ({order.items.length})</h3>
 
-              {order.products.map((product, idx) => (
-                <div key={idx} className="flex gap-6 pb-6 border-b-2 border-orange-300 last:border-b-0 last:pb-0 bg-white bg-opacity-70 p-4 rounded-lg mb-4 hover:bg-opacity-100 transition shadow-md">
+              {order.items.map((product) => (
+                <div key={product.id} className="flex gap-6 pb-6 border-b-2 border-orange-300 last:border-b-0 last:pb-0 bg-white bg-opacity-70 p-4 rounded-lg mb-4 hover:bg-opacity-100 transition shadow-md">
                   <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-lg flex-shrink-0 overflow-hidden border-3 border-orange-300 shadow-md">
                     <img
                       src={product.image || 'https://via.placeholder.com/100'}
-                      alt={product.name}
+                      alt={product.title}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-lg mb-1 text-orange-900">{product.name}</h4>
+                    <h4 className="font-bold text-gray-900 text-lg mb-1 text-orange-900">{product.title}</h4>
                     <p className="text-orange-700 text-sm mb-2 font-semibold">Qty: {product.quantity}</p>
                     <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">₹{(product.price * product.quantity).toFixed(2)}</p>
+                    <p className="text-xs mt-1 font-semibold text-slate-700">Item Status: {product.itemStatus}</p>
                   </div>
                 </div>
               ))}
+
             </div>
 
             {/* Delivery Details */}
@@ -387,10 +493,10 @@ function OrderTracking() {
 
           {/* Full Timeline Details */}
           <div className="bg-gradient-to-r from-violet-50 via-purple-50 to-pink-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-purple-200">
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">TIMELINE</h3>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">DELIVERY TIMELINE</h3>
 
             <div className="space-y-4">
-              {order.timeline.map((step, idx) => (
+              {deliveryTimeline.map((step, idx) => (
                 <div key={idx} className={`flex gap-4 p-4 rounded-lg border-2 transition ${
                   step.completed ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-300 shadow-md' : 'bg-gradient-to-r from-gray-100 to-slate-100 border-gray-300'
                 }`}>
@@ -421,6 +527,176 @@ function OrderTracking() {
             </div>
           </div>
 
+          {/* Returns & Refunds */}
+          <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-red-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-rose-200">
+            <h3 className="text-2xl font-bold text-rose-700 mb-4">Returns & Refunds</h3>
+
+            {returnSuccess && (
+              <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                {returnSuccess}
+              </p>
+            )}
+
+            {returnError && (
+              <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+                {returnError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+              <div className="bg-white rounded-lg border border-slate-200 p-3">
+                <p className="text-xs text-slate-500 uppercase">Remaining Active Items</p>
+                <p className="text-xl font-bold text-slate-900 mt-1">{order.items.filter((item) => item.itemStatus !== 'Returned / Refunded').length}</p>
+              </div>
+              <div className="bg-white rounded-lg border border-slate-200 p-3">
+                <p className="text-xs text-slate-500 uppercase">Returned Items</p>
+                <p className="text-xl font-bold text-slate-900 mt-1">{order.items.filter((item) => item.itemStatus === 'Returned / Refunded').length}</p>
+              </div>
+              <div className="bg-white rounded-lg border border-slate-200 p-3">
+                <p className="text-xs text-slate-500 uppercase">Total Refunded</p>
+                <p className="text-xl font-bold text-slate-900 mt-1">₹{Number(order.totalRefunded || 0).toFixed(2)}</p>
+              </div>
+            </div>
+
+            <h4 className="text-lg font-bold text-rose-700 mb-3">Request Return</h4>
+
+            {!order.canRequestReturn ? (
+              <p className="text-sm font-semibold text-slate-700">
+                {order.status === 'Delivered'
+                  ? 'Return window expired. Returns are allowed within 7 days after delivery.'
+                  : 'Return option will be available after order is delivered.'}
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Select Items</label>
+                    <div className="max-h-40 overflow-y-auto border border-slate-300 rounded-lg p-2 space-y-2">
+                      {getEligibleItemsForReturn().map((item) => {
+                        const checked = returnForm.itemIds.includes(String(item.id));
+                        return (
+                          <label key={item.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                setReturnForm((prev) => {
+                                  const targetId = String(item.id);
+                                  return {
+                                    ...prev,
+                                    itemIds: event.target.checked
+                                      ? [...prev.itemIds, targetId]
+                                      : prev.itemIds.filter((id) => id !== targetId)
+                                  };
+                                });
+                              }}
+                            />
+                            <span>{item.title} x{item.quantity}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Reason</label>
+                    <select
+                      value={returnForm.reasonCategory}
+                      onChange={(event) => setReturnForm((prev) => ({ ...prev, reasonCategory: event.target.value }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 mb-2"
+                    >
+                      <option value="Damaged">Damaged</option>
+                      <option value="Wrong item">Wrong item</option>
+                      <option value="Not satisfied">Not satisfied</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <textarea
+                      rows={3}
+                      value={returnForm.comment}
+                      onChange={(event) => setReturnForm((prev) => ({ ...prev, comment: event.target.value }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      placeholder="Comment (optional)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Received Product Photo</label>
+                    <input type="file" accept="image/*" onChange={handleReturnImageUpload} className="w-full" />
+                    {returnForm.image && (
+                      <img src={returnForm.image} alt="Return preview" className="mt-2 w-24 h-24 object-cover rounded-lg border border-slate-200" />
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={submitReturnRequest}
+                  disabled={submittingReturn || returnForm.itemIds.length === 0}
+                  className="mt-5 px-6 py-3 bg-rose-600 text-white rounded-lg font-semibold hover:bg-rose-700 disabled:opacity-60"
+                >
+                  {submittingReturn ? 'Submitting...' : 'Submit Return Request'}
+                </button>
+              </>
+            )}
+            <div className="mt-8 bg-white rounded-xl p-6 border border-slate-200">
+              <h4 className="text-xl font-bold text-slate-900 mb-4">Return History</h4>
+
+              {(order.returnRequests || []).length === 0 ? (
+                <p className="text-sm font-semibold text-slate-600">No return requests submitted for this order yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {order.returnRequests.map((request) => (
+                    <div key={request.id} className="rounded-xl border border-slate-200 p-4 bg-slate-50">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-semibold text-slate-900">{request.reasonCategory}</p>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getReturnStatusBadgeColor(request.status)}`}>
+                          {request.status}
+                        </span>
+                      </div>
+                      <div className="space-y-1 mt-2">
+                        {request.returnItems.map((item) => (
+                          <p key={`${request.id}-${item.orderItemId}`} className="text-sm text-slate-700">
+                            {item.productTitle} x{item.quantity}
+                          </p>
+                        ))}
+                      </div>
+                      {request.comment && <p className="text-sm text-slate-700 mt-1"><span className="font-semibold">Comment:</span> {request.comment}</p>}
+                      <p className="text-xs text-slate-600 mt-1">Refund: INR {Number(request.refundAmount || 0).toFixed(2)} ({request.refundStatus})</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Requested on {request.createdAt ? new Date(request.createdAt).toLocaleString() : 'N/A'}
+                      </p>
+                      {request.image && (
+                        <img
+                          src={request.image}
+                          alt="Returned product"
+                          className="mt-3 w-28 h-28 object-cover rounded-lg border border-slate-200"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 bg-white rounded-xl p-6 border border-slate-200">
+              <h4 className="text-xl font-bold text-slate-900 mb-4">Refund Entries</h4>
+              {(order.refundHistory || []).length === 0 ? (
+                <p className="text-sm text-slate-600">No refunds processed yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {order.refundHistory.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Request: {entry.returnRequestId}</p>
+                        <p className="text-xs text-slate-600">{entry.processedAt ? new Date(entry.processedAt).toLocaleString() : 'N/A'}</p>
+                      </div>
+                      <p className="text-sm font-bold text-emerald-700">₹{Number(entry.amount || 0).toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Support Info */}
           <div className="bg-gradient-to-r from-indigo-50 via-blue-50 to-cyan-50 rounded-xl shadow-lg p-8 mb-8 border-2 border-blue-200">
             <h3 className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 mb-6">NEED HELP?</h3>
@@ -442,7 +718,6 @@ function OrderTracking() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-4 justify-center flex-wrap">
             <Link
               to="/orders"

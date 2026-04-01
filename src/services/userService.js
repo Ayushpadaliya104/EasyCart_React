@@ -19,3 +19,12 @@ export const deleteUserApi = async (id) => {
   const response = await apiClient.delete(`/users/${id}`);
   return response.data;
 };
+
+export const changePasswordApi = async ({ oldPassword, newPassword }) => {
+  const response = await apiClient.post('/auth/change-password', {
+    oldPassword,
+    newPassword
+  });
+
+  return response.data;
+};

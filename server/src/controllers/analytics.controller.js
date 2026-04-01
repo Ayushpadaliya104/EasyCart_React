@@ -24,6 +24,12 @@ const formatMonthLabel = (date) =>
     year: '2-digit'
   });
 
+const revenueProjection = {
+  sales: { $sum: '$total' },
+  refunds: { $sum: { $ifNull: ['$totalRefunded', 0] } },
+  orders: { $sum: 1 }
+};
+
 const getMonthlySales = async (months) => {
   const now = new Date();
   const start = addMonths(getMonthStart(now), -(months - 1));
@@ -41,8 +47,9 @@ const getMonthlySales = async (months) => {
           year: { $year: '$createdAt' },
           month: { $month: '$createdAt' }
         },
-        sales: { $sum: '$total' },
-        orders: { $sum: 1 }
+        sales: revenueProjection.sales,
+        refunds: revenueProjection.refunds,
+        orders: revenueProjection.orders
       }
     },
     {
@@ -58,6 +65,8 @@ const getMonthlySales = async (months) => {
       monthKey(entry._id.year, entry._id.month),
       {
         sales: roundTwo(entry.sales),
+        refunds: roundTwo(entry.refunds),
+        netRevenue: roundTwo(Number(entry.sales || 0) - Number(entry.refunds || 0)),
         orders: entry.orders
       }
     ])
@@ -67,11 +76,13 @@ const getMonthlySales = async (months) => {
   for (let index = months - 1; index >= 0; index -= 1) {
     const monthDate = addMonths(getMonthStart(now), -index);
     const key = monthKey(monthDate.getFullYear(), monthDate.getMonth() + 1);
-    const values = byMonth.get(key) || { sales: 0, orders: 0 };
+    const values = byMonth.get(key) || { sales: 0, refunds: 0, netRevenue: 0, orders: 0 };
 
     result.push({
       month: formatMonthLabel(monthDate),
       sales: values.sales,
+      refunds: values.refunds,
+      netRevenue: values.netRevenue,
       orders: values.orders
     });
   }
@@ -163,7 +174,13 @@ const getDashboardAnalytics = async (_req, res, next) => {
       Order.countDocuments({}),
       Order.aggregate([
         { $match: { status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$total' } } }
+        {
+          $group: {
+            _id: null,
+            sales: { $sum: '$total' },
+            refunds: { $sum: { $ifNull: ['$totalRefunded', 0] } }
+          }
+        }
       ]),
       Order.aggregate([
         {
@@ -172,7 +189,13 @@ const getDashboardAnalytics = async (_req, res, next) => {
             createdAt: { $gte: yearStart }
           }
         },
-        { $group: { _id: null, total: { $sum: '$total' } } }
+        {
+          $group: {
+            _id: null,
+            sales: { $sum: '$total' },
+            refunds: { $sum: { $ifNull: ['$totalRefunded', 0] } }
+          }
+        }
       ]),
       Order.aggregate([
         {
@@ -184,7 +207,13 @@ const getDashboardAnalytics = async (_req, res, next) => {
             }
           }
         },
-        { $group: { _id: null, total: { $sum: '$total' } } }
+        {
+          $group: {
+            _id: null,
+            sales: { $sum: '$total' },
+            refunds: { $sum: { $ifNull: ['$totalRefunded', 0] } }
+          }
+        }
       ]),
       Order.aggregate([
         {
@@ -196,16 +225,26 @@ const getDashboardAnalytics = async (_req, res, next) => {
             }
           }
         },
-        { $group: { _id: null, total: { $sum: '$total' } } }
+        {
+          $group: {
+            _id: null,
+            sales: { $sum: '$total' },
+            refunds: { $sum: { $ifNull: ['$totalRefunded', 0] } }
+          }
+        }
       ]),
       getMonthlySales(6),
       getCategorySales(6)
     ]);
 
-    const totalSales = roundTwo(allTimeSalesAgg[0]?.total || 0);
-    const totalRevenue = roundTwo(ytdRevenueAgg[0]?.total || 0);
-    const currentMonthSales = roundTwo(currentMonthSalesAgg[0]?.total || 0);
-    const previousMonthSales = roundTwo(previousMonthSalesAgg[0]?.total || 0);
+    const totalSales = roundTwo(allTimeSalesAgg[0]?.sales || 0);
+    const totalRefunds = roundTwo(allTimeSalesAgg[0]?.refunds || 0);
+    const netRevenue = roundTwo(totalSales - totalRefunds);
+    const totalRevenue = roundTwo(ytdRevenueAgg[0]?.sales || 0);
+    const totalRevenueRefunds = roundTwo(ytdRevenueAgg[0]?.refunds || 0);
+    const ytdNetRevenue = roundTwo(totalRevenue - totalRevenueRefunds);
+    const currentMonthSales = roundTwo((currentMonthSalesAgg[0]?.sales || 0) - (currentMonthSalesAgg[0]?.refunds || 0));
+    const previousMonthSales = roundTwo((previousMonthSalesAgg[0]?.sales || 0) - (previousMonthSalesAgg[0]?.refunds || 0));
 
     const growthRate =
       previousMonthSales > 0
@@ -218,9 +257,11 @@ const getDashboardAnalytics = async (_req, res, next) => {
       success: true,
       stats: {
         totalSales,
+        totalRefunds,
+        netRevenue,
         totalOrders,
         totalUsers,
-        totalRevenue,
+        totalRevenue: ytdNetRevenue,
         growthRate
       },
       monthly,
@@ -242,8 +283,10 @@ const getSalesReports = async (req, res, next) => {
     ]);
 
     const totalSales = roundTwo(monthly.reduce((sum, month) => sum + month.sales, 0));
+    const totalRefunds = roundTwo(monthly.reduce((sum, month) => sum + Number(month.refunds || 0), 0));
+    const netRevenue = roundTwo(totalSales - totalRefunds);
     const totalOrders = monthly.reduce((sum, month) => sum + month.orders, 0);
-    const averageOrderValue = totalOrders > 0 ? roundTwo(totalSales / totalOrders) : 0;
+    const averageOrderValue = totalOrders > 0 ? roundTwo(netRevenue / totalOrders) : 0;
 
     return res.status(200).json({
       success: true,
@@ -251,6 +294,8 @@ const getSalesReports = async (req, res, next) => {
       months,
       summary: {
         totalSales,
+        totalRefunds,
+        netRevenue,
         totalOrders,
         averageOrderValue
       },

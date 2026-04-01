@@ -2,6 +2,7 @@ const express = require('express');
 
 const {
   getProducts,
+  getTrendingProducts,
   getProductByIdOrSlug,
   getProductFeedback,
   upsertProductRating,
@@ -15,6 +16,7 @@ const { protect, requireAdmin, optionalProtect } = require('../middlewares/auth.
 const router = express.Router();
 
 router.get('/', getProducts);
+router.get('/trending', getTrendingProducts);
 router.get('/:idOrSlug/feedback', optionalProtect, getProductFeedback);
 router.post('/:idOrSlug/rating', protect, upsertProductRating);
 router.post('/:idOrSlug/reviews', protect, createProductReview);

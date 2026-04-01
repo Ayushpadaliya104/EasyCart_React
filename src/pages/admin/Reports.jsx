@@ -8,6 +8,8 @@ function Reports() {
   const [report, setReport] = useState({
     summary: {
       totalSales: 0,
+      totalRefunds: 0,
+      netRevenue: 0,
       totalOrders: 0,
       averageOrderValue: 0
     },
@@ -85,7 +87,7 @@ function Reports() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Total Sales</p>
           <p className="text-2xl font-bold text-slate-900 mt-2">
@@ -102,6 +104,18 @@ function Reports() {
           <p className="text-xs uppercase tracking-wide text-slate-500">Average Order Value</p>
           <p className="text-2xl font-bold text-slate-900 mt-2">
             {loading ? '...' : `₹${report.summary.averageOrderValue.toLocaleString()}`}
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Total Refunds</p>
+          <p className="text-2xl font-bold text-rose-600 mt-2">
+            {loading ? '...' : `₹${report.summary.totalRefunds.toLocaleString()}`}
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Net Revenue</p>
+          <p className="text-2xl font-bold text-emerald-700 mt-2">
+            {loading ? '...' : `₹${report.summary.netRevenue.toLocaleString()}`}
           </p>
         </div>
       </section>

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const Order = require('../models/Order');
 const ProductRating = require('../models/ProductRating');
 const ProductReview = require('../models/ProductReview');
 const slugify = require('../utils/slugify');
@@ -105,6 +106,77 @@ const getProducts = async (req, res, next) => {
       page: currentPage,
       totalPages: Math.ceil(total / perPage),
       products
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getTrendingProducts = async (req, res, next) => {
+  try {
+    const limit = Math.max(1, Number(req.query.limit) || 4);
+
+    const aggregated = await Order.aggregate([
+      {
+        $match: {
+          status: { $ne: 'Cancelled' }
+        }
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.product',
+          quantityOrdered: { $sum: '$items.quantity' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $sort: { quantityOrdered: -1, orderCount: -1 } },
+      { $limit: limit * 3 }
+    ]);
+
+    const productIdsInRankOrder = aggregated.map((entry) => String(entry._id));
+
+    if (productIdsInRankOrder.length === 0) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        products: []
+      });
+    }
+
+    const orderMetaByProductId = new Map(
+      aggregated.map((entry) => [String(entry._id), {
+        quantityOrdered: Number(entry.quantityOrdered || 0),
+        orderCount: Number(entry.orderCount || 0)
+      }])
+    );
+
+    const products = await Product.find({
+      _id: { $in: productIdsInRankOrder },
+      isActive: true
+    }).populate('category', 'name slug');
+
+    const productById = new Map(products.map((item) => [String(item._id), item]));
+
+    const rankedProducts = productIdsInRankOrder
+      .map((id) => {
+        const product = productById.get(id);
+        if (!product) {
+          return null;
+        }
+
+        return {
+          ...product.toObject(),
+          trending: orderMetaByProductId.get(id) || { quantityOrdered: 0, orderCount: 0 }
+        };
+      })
+      .filter(Boolean)
+      .slice(0, limit);
+
+    return res.status(200).json({
+      success: true,
+      count: rankedProducts.length,
+      products: rankedProducts
     });
   } catch (error) {
     return next(error);
@@ -397,6 +469,7 @@ const deleteProduct = async (req, res, next) => {
 
 module.exports = {
   getProducts,
+  getTrendingProducts,
   getProductByIdOrSlug,
   getProductFeedback,
   upsertProductRating,

@@ -49,6 +49,17 @@ export const fetchProducts = async (params = {}) => {
   };
 };
 
+export const fetchTrendingProducts = async (limit = 4) => {
+  const response = await apiClient.get('/products/trending', {
+    params: { limit }
+  });
+
+  return {
+    ...response.data,
+    products: (response.data.products || []).map(normalizeProduct)
+  };
+};
+
 export const fetchProductById = async (idOrSlug) => {
   const response = await apiClient.get(`/products/${idOrSlug}`);
   return normalizeProduct(response.data.product);
