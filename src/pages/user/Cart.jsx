@@ -66,7 +66,7 @@ function Cart() {
                         <div className="flex justify-between md:flex-col md:justify-center md:text-center mb-4 md:mb-0">
                           <span className="md:hidden font-semibold text-gray-700">Price</span>
                           <p className="text-xl font-bold text-slate-900">
-                            ₹{item.price.toFixed(2)}
+                            ₹ {item.price.toFixed(2)}
                           </p>
                         </div>
 
@@ -95,7 +95,7 @@ function Cart() {
                         <div className="flex justify-between md:flex-col md:justify-center md:text-center mb-4 md:mb-0">
                           <span className="md:hidden font-semibold text-gray-700">Total</span>
                           <p className="text-xl font-bold text-blue-700">
-                            ₹{(item.price * item.quantity).toFixed(2)}
+                            ₹ {(item.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
 
@@ -126,7 +126,7 @@ function Cart() {
                   <div className="space-y-4 mb-8 pb-8 border-b">
                     <div className="flex justify-between text-gray-700">
                       <span className="font-medium">Subtotal</span>
-                      <span className="font-bold">₹{getTotalPrice().toFixed(2)}</span>
+                      <span className="font-bold">₹ {getTotalPrice().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-700">
                       <span className="font-medium">Shipping</span>
@@ -134,13 +134,13 @@ function Cart() {
                     </div>
                     <div className="flex justify-between text-gray-700">
                       <span className="font-medium">Tax ({taxRate}%)</span>
-                      <span className="font-bold">₹{taxAmount.toFixed(2)}</span>
+                      <span className="font-bold">₹ {taxAmount.toFixed(2)}</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between mb-8">
                     <span className="text-xl font-bold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-slate-900 bg-clip-text text-transparent">₹{finalTotal.toFixed(2)}</span>
+                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-slate-900 bg-clip-text text-transparent">₹ {finalTotal.toFixed(2)}</span>
                   </div>
 
                   <Link

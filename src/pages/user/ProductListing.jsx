@@ -225,7 +225,7 @@ function ProductListing() {
                 <h4 className="font-bold text-slate-800 mb-3 tracking-wide">Price Range</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm text-indigo-700 font-semibold mb-1">Low Price: ₹{filters.minPrice}</label>
+                    <label className="block text-sm text-indigo-700 font-semibold mb-1">Low Price: ₹ {filters.minPrice}</label>
                     <input
                       type="range"
                       min="0"
@@ -246,7 +246,7 @@ function ProductListing() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-cyan-700 font-semibold mb-1">High Price: ₹{filters.maxPrice == null ? priceLimit : filters.maxPrice}</label>
+                    <label className="block text-sm text-cyan-700 font-semibold mb-1">High Price: ₹ {filters.maxPrice == null ? priceLimit : filters.maxPrice}</label>
                     <input
                       type="range"
                       min="0"

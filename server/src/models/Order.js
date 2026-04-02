@@ -178,8 +178,50 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['card', 'paypal', 'razorpay', 'cod'],
+      enum: ['card', 'paypal', 'razorpay', 'cod', 'wallet'],
       default: 'card'
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['Pending', 'Paid', 'Failed'],
+      default: 'Pending'
+    },
+    paidAt: {
+      type: Date,
+      default: null
+    },
+    walletTransactions: {
+      type: [
+        new mongoose.Schema(
+          {
+            transactionId: {
+              type: mongoose.Schema.Types.ObjectId,
+              required: true
+            },
+            type: {
+              type: String,
+              enum: ['Debit', 'Credit'],
+              required: true
+            },
+            amount: {
+              type: Number,
+              required: true,
+              min: 0
+            },
+            source: {
+              type: String,
+              enum: ['Purchase', 'Refund'],
+              required: true
+            },
+            createdAt: {
+              type: Date,
+              default: Date.now
+            }
+          },
+          { _id: false }
+        )
+      ],
+      default: []
     },
     status: {
       type: String,

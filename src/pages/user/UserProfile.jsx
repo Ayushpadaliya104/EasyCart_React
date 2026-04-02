@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { useWishlist } from '../../context/WishlistContext';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings, FiEye, FiClock, FiTruck, FiCheckCircle, FiBell, FiRefreshCw } from 'react-icons/fi';
+import { useWallet } from '../../context/WalletContext';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiLogOut, FiEdit2, FiHeart, FiPackage, FiSettings, FiEye, FiClock, FiTruck, FiCheckCircle, FiBell, FiRefreshCw, FiCreditCard, FiArrowRight } from 'react-icons/fi';
 import { fetchMyOrdersApi, submitReturnRequestApi } from '../../services/orderService';
 import { changePasswordApi } from '../../services/userService';
 
@@ -39,6 +40,7 @@ const buildProfileFormData = (user) => {
 function UserProfile() {
   const { user, logout, updateUser } = useAuth();
   const { wishlistItems, removeFromWishlist } = useWishlist();
+  const { wallet } = useWallet();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [orders, setOrders] = useState([]);
@@ -198,7 +200,7 @@ function UserProfile() {
 
   useEffect(() => {
     const loadOrders = async () => {
-      if (!user || activeTab !== 'orders') {
+      if (!user || !['orders', 'returns'].includes(activeTab)) {
         return;
       }
 
@@ -216,6 +218,34 @@ function UserProfile() {
 
     loadOrders();
   }, [activeTab, user]);
+
+  const returnEntries = useMemo(() => {
+    return orders
+      .flatMap((order) => {
+        const orderItemsById = new Map((order.items || []).map((item) => [String(item.id), item]));
+
+        return (order.returnRequests || []).map((request) => {
+          const returnItems = (request.returnItems || []).map((returnItem) => {
+            const matchedOrderItem = orderItemsById.get(String(returnItem.orderItemId));
+
+            return {
+              ...returnItem,
+              productImage: matchedOrderItem?.image || ''
+            };
+          });
+
+          return {
+            id: `${order.id}-${request.id}`,
+            orderId: order.id,
+            request: {
+              ...request,
+              returnItems
+            }
+          };
+        });
+      })
+      .sort((a, b) => new Date(b.request.createdAt || 0).getTime() - new Date(a.request.createdAt || 0).getTime());
+  }, [orders]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -251,6 +281,23 @@ function UserProfile() {
         return <FiCheckCircle className="inline mr-1" />;
       default:
         return <FiBell className="inline mr-1" />;
+    }
+  };
+
+  const getReturnStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'Requested':
+        return 'bg-amber-100 text-amber-800';
+      case 'Approved':
+        return 'bg-blue-100 text-blue-800';
+      case 'Picked':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'Refunded':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-rose-100 text-rose-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -351,16 +398,50 @@ function UserProfile() {
 
       {/* Profile Header */}
       <section className="bg-gradient-to-r from-slate-900 via-indigo-900 to-cyan-800 text-white py-12 px-4">
-        <div className="container mx-auto flex items-center gap-8">
-          <div className="w-24 h-24 bg-gradient-to-br from-pink-400 via-orange-300 to-yellow-300 rounded-full flex items-center justify-center text-4xl text-slate-900 font-bold shadow-xl ring-4 ring-white/40">
-            {user.name?.charAt(0)?.toUpperCase() || 'U'}
+        <div className="container mx-auto flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-8">
+            <div className="w-24 h-24 bg-gradient-to-br from-pink-400 via-orange-300 to-yellow-300 rounded-full flex items-center justify-center text-4xl text-slate-900 font-bold shadow-xl ring-4 ring-white/40">
+              {user.name?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-100 to-amber-100 bg-clip-text text-transparent">{user.name}</h1>
+              <p className="text-cyan-100 font-medium">{user.email}</p>
+              <p className="text-cyan-200 text-sm">
+                Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently joined'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-cyan-100 to-amber-100 bg-clip-text text-transparent">{user.name}</h1>
-            <p className="text-cyan-100 font-medium">{user.email}</p>
-            <p className="text-cyan-200 text-sm">
-              Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently joined'}
-            </p>
+
+          <div className="self-start md:self-center md:min-w-[320px] rounded-2xl border border-white/20 bg-white/10 px-5 py-4 shadow-2xl backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/80">Wallet Balance</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-300 to-cyan-400 text-slate-900 shadow-lg">
+                    <FiCreditCard size={22} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-extrabold text-white">₹ {Number(wallet?.balance || 0).toFixed(2)}</p>
+                    <p className="text-xs text-cyan-100/80">Add money or check passbook</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                to="/wallet#add-money"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-indigo-700 shadow-md transition hover:bg-cyan-50"
+              >
+                Add Money <FiArrowRight />
+              </Link>
+              <Link
+                to="/wallet#history"
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                History <FiArrowRight />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -402,12 +483,16 @@ function UserProfile() {
                   >
                     <FiHeart /> Wishlist
                   </button>
-                  <Link
-                    to="/returns"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition text-slate-700 hover:bg-blue-100"
+                  <button
+                    onClick={() => setActiveTab('returns')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                      activeTab === 'returns'
+                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
+                        : 'text-slate-700 hover:bg-blue-100'
+                    }`}
                   >
                     <FiRefreshCw /> Returns
-                  </Link>
+                  </button>
                   <button
                     onClick={() => setActiveTab('settings')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
@@ -433,15 +518,17 @@ function UserProfile() {
               {/* Profile Tab */}
               {activeTab === 'profile' && (
                 <div className="bg-gradient-to-br from-white via-cyan-50 to-indigo-50 rounded-xl shadow-xl p-8 border border-cyan-100">
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-6">
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-700 to-cyan-600 bg-clip-text text-transparent">Profile Information</h2>
-                    <button
-                      onClick={handleToggleEdit}
-                      className="flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-600 hover:text-white transition"
-                    >
-                      <FiEdit2 size={18} />
-                      {isEditing ? 'Cancel' : 'Edit'}
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                      <button
+                        onClick={handleToggleEdit}
+                        className="flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-600 hover:text-white transition"
+                      >
+                        <FiEdit2 size={18} />
+                        {isEditing ? 'Cancel' : 'Edit'}
+                      </button>
+                    </div>
                   </div>
 
                   {saveError && (
@@ -613,7 +700,7 @@ function UserProfile() {
 
                             <div className="flex items-center gap-4">
                               <div className="text-right">
-                                <p className="text-xl font-bold text-slate-900">INR {order.total.toFixed(2)}</p>
+                                <p className="text-xl font-bold text-slate-900">₹ {order.total.toFixed(2)}</p>
                                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
                                   {getStatusIcon(order.status)}
                                   {order.status}
@@ -676,6 +763,85 @@ function UserProfile() {
                 </div>
               )}
 
+              {/* Returns Tab */}
+              {activeTab === 'returns' && (
+                <div className="bg-gradient-to-br from-white via-blue-50 to-cyan-50 rounded-xl shadow-xl p-8 border border-blue-100">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-transparent mb-6">My Returns</h2>
+
+                  {ordersLoading ? (
+                    <div className="text-center py-10">
+                      <p className="text-gray-600">Loading return history...</p>
+                    </div>
+                  ) : ordersError ? (
+                    <div className="text-center py-10">
+                      <p className="text-red-600">{ordersError}</p>
+                    </div>
+                  ) : returnEntries.length === 0 ? (
+                    <div className="text-center py-10 border border-dashed border-blue-300 rounded-lg bg-blue-50/60">
+                      <p className="text-blue-800 font-semibold mb-2">No return requests found</p>
+                      <p className="text-blue-600 mb-4 text-sm">Aapne abhi tak koi return request submit nahi ki hai.</p>
+                      <button
+                        onClick={() => setActiveTab('orders')}
+                        className="inline-block bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-blue-700 transition"
+                      >
+                        Go To Orders
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      {returnEntries.map((entry) => (
+                        <div key={entry.id} className="border border-blue-200 rounded-lg p-5 hover:shadow-soft transition bg-white/85 hover:bg-white">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-lg text-gray-900">Order #{entry.orderId.slice(-8).toUpperCase()}</p>
+                              <p className="text-sm text-gray-600">Requested on {entry.request.createdAt ? new Date(entry.request.createdAt).toLocaleString() : 'N/A'}</p>
+                            </div>
+
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-slate-900">₹ {Number(entry.request.refundAmount || 0).toFixed(2)}</p>
+                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getReturnStatusBadgeColor(entry.request.status)}`}>
+                                {entry.request.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                            {entry.request.returnItems.map((item) => (
+                              <div key={`${entry.id}-${item.orderItemId}`} className="flex-shrink-0 text-center w-20">
+                                <div className="w-16 h-16 mx-auto bg-white rounded-md overflow-hidden border border-blue-200 mb-1">
+                                  <img
+                                    src={item.productImage || 'https://via.placeholder.com/100'}
+                                    alt={item.productTitle}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <p className="text-[11px] font-semibold line-clamp-2 text-slate-900">{item.productTitle}</p>
+                                <p className="text-[10px] text-slate-600">Qty {item.quantity}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+                              <p className="text-xs uppercase text-slate-500">Reason</p>
+                              <p className="font-semibold text-slate-900 mt-1">{entry.request.reasonCategory}</p>
+                            </div>
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+                              <p className="text-xs uppercase text-slate-500">Items</p>
+                              <p className="font-semibold text-slate-900 mt-1">{entry.request.returnItems.length}</p>
+                            </div>
+                            <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+                              <p className="text-xs uppercase text-slate-500">Refund</p>
+                              <p className="font-semibold text-emerald-700 mt-1">{entry.request.refundStatus}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Wishlist Tab */}
               {activeTab === 'wishlist' && (
                 <div className="bg-gradient-to-br from-white via-fuchsia-50 to-pink-50 rounded-xl shadow-xl p-8 border border-fuchsia-100">
@@ -715,7 +881,7 @@ function UserProfile() {
                               />
                             </div>
                             <p className="font-semibold text-slate-900 line-clamp-2 mb-1">{item.name}</p>
-                            <p className="text-fuchsia-700 font-bold">INR {Number(item.price || 0).toFixed(2)}</p>
+                            <p className="text-fuchsia-700 font-bold">₹ {Number(item.price || 0).toFixed(2)}</p>
                           </div>
                         ))}
                       </div>
@@ -906,4 +1072,5 @@ function UserProfile() {
 }
 
 export default UserProfile;
+
 

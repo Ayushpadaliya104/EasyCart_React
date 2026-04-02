@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -210,7 +210,7 @@ function Orders() {
 
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">INR {order.total.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-primary">₹ {order.total.toFixed(2)}</p>
                         <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
                           {getStatusIcon(order.status)}
                           {order.status}
@@ -318,7 +318,7 @@ function Orders() {
                             step.completed ? 'bg-gradient-to-br from-green-400 to-emerald-600 shadow-lg' : 'bg-gradient-to-br from-gray-400 to-gray-500'
                           }`}
                         >
-                          {step.completed ? '✓' : idx + 1}
+                          {step.completed ? 'âœ“' : idx + 1}
                         </div>
                         {idx < selectedOrder.timeline.length - 1 && (
                           <div className={`w-0.5 h-12 ${
@@ -341,7 +341,7 @@ function Orders() {
                   {selectedOrder.products.map((product, idx) => (
                     <div key={idx} className="flex justify-between bg-white bg-opacity-70 p-2 rounded hover:bg-opacity-100 transition">
                       <span className="text-orange-900">{product.name} x{product.quantity}</span>
-                      <span className="font-semibold text-orange-700">INR {(product.price * product.quantity).toFixed(2)}</span>
+                      <span className="font-semibold text-orange-700">₹ {(product.price * product.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -368,7 +368,7 @@ function Orders() {
                         </div>
                         {request.comment && <p className="text-xs text-rose-800 mt-1">Comment: {request.comment}</p>}
                         <p className="text-xs text-rose-700 mt-1">Status: {request.status}</p>
-                        <p className="text-xs text-rose-700 mt-1">Refund: INR {Number(request.refundAmount || 0).toFixed(2)}</p>
+                        <p className="text-xs text-rose-700 mt-1">Refund: ₹ {Number(request.refundAmount || 0).toFixed(2)}</p>
                         {request.image && (
                           <img
                             src={request.image}
@@ -385,15 +385,15 @@ function Orders() {
               <div className="bg-gradient-to-r from-emerald-100 to-teal-100 p-4 rounded-lg border-l-4 border-teal-500">
                 <div className="flex justify-between mb-2 text-teal-900">
                   <span className="font-semibold">Subtotal</span>
-                  <span>INR {selectedOrder.subtotal.toFixed(2)}</span>
+                  <span>₹ {selectedOrder.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-3 text-teal-900">
                   <span className="font-semibold">Tax</span>
-                  <span>INR {selectedOrder.tax.toFixed(2)}</span>
+                  <span>₹ {selectedOrder.tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg bg-gradient-to-r from-teal-600 to-emerald-600 text-white p-2 rounded">
                   <span>Total</span>
-                  <span>INR {selectedOrder.total.toFixed(2)}</span>
+                  <span>₹ {selectedOrder.total.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -510,3 +510,4 @@ function Orders() {
 }
 
 export default Orders;
+

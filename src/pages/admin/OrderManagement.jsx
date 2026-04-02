@@ -111,7 +111,7 @@ function OrderManagement() {
     setDetailsError('');
   };
 
-  const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
+  const formatMoney = (value) => `₹ ${Number(value || 0).toFixed(2)}`;
 
   const escapeHtml = (value) =>
     String(value || '')
@@ -340,7 +340,7 @@ function OrderManagement() {
               <tr key={order.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                 <td className="px-6 py-4 text-sm font-medium text-slate-900">{order.id}</td>
                 <td className="px-6 py-4 text-sm text-slate-600">{order.userName || order.userEmail || `Customer #${order.userId}`}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-slate-900">₹{order.total.toFixed(2)}</td>
+                <td className="px-6 py-4 text-sm font-semibold text-slate-900">₹ {order.total.toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm text-slate-600">{order.date}</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
@@ -450,8 +450,8 @@ function OrderManagement() {
                           <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-slate-600">₹{Number(item.price || 0).toFixed(2)} each</p>
-                          <p className="text-sm font-semibold text-slate-900">₹{(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)}</p>
+                          <p className="text-sm text-slate-600">₹ {Number(item.price || 0).toFixed(2)} each</p>
+                          <p className="text-sm font-semibold text-slate-900">₹ {(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
@@ -461,12 +461,12 @@ function OrderManagement() {
                 <section className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                   <h3 className="text-lg font-semibold text-slate-900 mb-3">Billing Summary</h3>
                   <div className="space-y-1 text-sm text-slate-700">
-                    <div className="flex justify-between"><span>Subtotal</span><span>₹{Number(detailsOrder.subtotal || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>Tax</span><span>₹{Number(detailsOrder.tax || 0).toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>Shipping</span><span>₹{Number(detailsOrder.shippingCharge || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Subtotal</span><span>₹ {Number(detailsOrder.subtotal || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Tax</span><span>₹ {Number(detailsOrder.tax || 0).toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Shipping</span><span>₹ {Number(detailsOrder.shippingCharge || 0).toFixed(2)}</span></div>
                     <div className="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200 mt-2">
                       <span>Total</span>
-                      <span>₹{Number(detailsOrder.total || 0).toFixed(2)}</span>
+                      <span>₹ {Number(detailsOrder.total || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </section>
@@ -508,7 +508,7 @@ function OrderManagement() {
                             ))}
                           </div>
                           {request.comment && <p className="text-sm text-slate-700 mt-1"><span className="font-semibold">Comment:</span> {request.comment}</p>}
-                          <p className="text-xs text-slate-600 mt-1">Refund: INR {Number(request.refundAmount || 0).toFixed(2)} ({request.refundStatus})</p>
+                          <p className="text-xs text-slate-600 mt-1">Refund: ₹ {Number(request.refundAmount || 0).toFixed(2)} ({request.refundStatus})</p>
                           <p className="text-xs text-slate-500 mt-1">Requested on {request.createdAt ? new Date(request.createdAt).toLocaleString() : 'N/A'}</p>
                           {request.image && (
                             <img
@@ -570,4 +570,5 @@ function OrderManagement() {
 }
 
 export default OrderManagement;
+
 

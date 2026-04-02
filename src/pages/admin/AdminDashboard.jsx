@@ -68,7 +68,7 @@ function AdminDashboard() {
             <div>
               <p className="text-slate-500 text-sm font-medium">Total Sales</p>
               <p className="text-3xl font-bold mt-2 text-slate-900">
-                {loading ? '...' : `₹${analytics.stats.totalSales.toLocaleString()}`}
+                {loading ? '...' : `₹ ${analytics.stats.totalSales.toLocaleString()}`}
               </p>
               <p className="text-emerald-600 text-sm mt-2 flex items-center gap-1">
                 <FiArrowUpRight />
@@ -116,7 +116,7 @@ function AdminDashboard() {
             <div>
               <p className="text-slate-500 text-sm font-medium">Net Revenue</p>
               <p className="text-3xl font-bold mt-2 text-slate-900">
-                {loading ? '...' : `₹${analytics.stats.netRevenue.toLocaleString()}`}
+                {loading ? '...' : `₹ ${analytics.stats.netRevenue.toLocaleString()}`}
               </p>
               <p className="text-slate-500 text-sm mt-2">Year to date</p>
             </div>
@@ -131,7 +131,7 @@ function AdminDashboard() {
             <div>
               <p className="text-slate-500 text-sm font-medium">Total Refunds</p>
               <p className="text-3xl font-bold mt-2 text-rose-600">
-                {loading ? '...' : `₹${analytics.stats.totalRefunds.toLocaleString()}`}
+                {loading ? '...' : `₹ ${analytics.stats.totalRefunds.toLocaleString()}`}
               </p>
               <p className="text-slate-500 text-sm mt-2">All processed refunds</p>
             </div>
@@ -155,7 +155,7 @@ function AdminDashboard() {
                 <div key={month.month}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-slate-700">{month.month}</span>
-                    <span className="font-semibold text-slate-900">₹{month.sales.toLocaleString()}</span>
+                    <span className="font-semibold text-slate-900">₹ {month.sales.toLocaleString()}</span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -181,7 +181,7 @@ function AdminDashboard() {
                 <div key={category.category}>
                   <div className="flex justify-between mb-1 text-sm">
                     <span className="text-slate-700">{category.category}</span>
-                    <span className="font-semibold text-slate-900">₹{category.value.toLocaleString()}</span>
+                    <span className="font-semibold text-slate-900">₹ {category.value.toLocaleString()}</span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div

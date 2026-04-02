@@ -5,6 +5,7 @@ import { WishlistProvider } from './context/WishlistContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { QueryProvider } from './context/QueryContext';
 import { StoreSettingsProvider } from './context/StoreSettingsContext';
+import { WalletProvider } from './context/WalletContext';
 
 // User Pages
 import Homepage from './pages/user/Homepage';
@@ -20,6 +21,7 @@ import Register from './pages/user/Register';
 import Wishlist from './pages/user/Wishlist';
 import UserProfile from './pages/user/UserProfile';
 import QuerySupport from './pages/user/QuerySupport';
+import Wallet from './pages/user/Wallet';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -49,14 +51,16 @@ function App() {
         <CartProvider>
           <WishlistProvider>
             <StoreSettingsProvider>
-              <QueryProvider>
-                <Routes>
+              <WalletProvider>
+                <QueryProvider>
+                  <Routes>
                 {/* User Routes */}
                 <Route path="/" element={<Homepage />} />
                 <Route path="/products" element={<ProductListing />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/wallet" element={<Wallet />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/order/:id/track" element={<OrderTracking />} />
                 <Route path="/returns" element={<ReturnHistory />} />
@@ -79,8 +83,9 @@ function App() {
 
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </QueryProvider>
+                  </Routes>
+                </QueryProvider>
+              </WalletProvider>
             </StoreSettingsProvider>
           </WishlistProvider>
         </CartProvider>

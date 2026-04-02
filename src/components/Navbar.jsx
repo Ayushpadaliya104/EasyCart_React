@@ -123,7 +123,7 @@ function Navbar() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-800 truncate text-sm">{product.name}</p>
-                            <p className="text-cyan-600 font-bold text-sm">₹{product.price.toLocaleString()}</p>
+                            <p className="text-cyan-600 font-bold text-sm">₹ {product.price.toLocaleString()}</p>
                           </div>
                         </button>
                       ))}
@@ -243,7 +243,7 @@ function Navbar() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-800 truncate text-xs">{product.name}</p>
-                            <p className="text-cyan-600 font-bold text-xs">₹{product.price.toLocaleString()}</p>
+                            <p className="text-cyan-600 font-bold text-xs">₹ {product.price.toLocaleString()}</p>
                           </div>
                         </button>
                       ))}

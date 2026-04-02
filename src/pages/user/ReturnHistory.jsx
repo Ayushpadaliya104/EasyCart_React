@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiEye, FiX } from 'react-icons/fi';
 import Navbar from '../../components/Navbar';
@@ -38,17 +38,33 @@ function ReturnHistory() {
 
   const returnEntries = useMemo(() => {
     return orders
-      .flatMap((order) =>
-        (order.returnRequests || []).map((request) => ({
-          id: `${order.id}-${request.id}`,
-          orderId: order.id,
-          orderDate: order.date,
-          orderStatus: order.status,
-          total: Number(order.total || 0),
-          totalRefunded: Number(order.totalRefunded || 0),
-          request
-        }))
-      )
+      .flatMap((order) => {
+        const orderItemsById = new Map((order.items || []).map((item) => [String(item.id), item]));
+
+        return (order.returnRequests || []).map((request) => {
+          const returnItems = (request.returnItems || []).map((returnItem) => {
+            const matchedOrderItem = orderItemsById.get(String(returnItem.orderItemId));
+
+            return {
+              ...returnItem,
+              productImage: matchedOrderItem?.image || ''
+            };
+          });
+
+          return {
+            id: `${order.id}-${request.id}`,
+            orderId: order.id,
+            orderDate: order.date,
+            orderStatus: order.status,
+            total: Number(order.total || 0),
+            totalRefunded: Number(order.totalRefunded || 0),
+            request: {
+              ...request,
+              returnItems
+            }
+          };
+        });
+      })
       .sort((a, b) => new Date(b.request.createdAt || 0).getTime() - new Date(a.request.createdAt || 0).getTime());
   }, [orders]);
 
@@ -143,7 +159,26 @@ function ReturnHistory() {
                     </div>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                       <p className="text-xs uppercase text-slate-500">Refund</p>
-                      <p className="font-semibold text-emerald-700 mt-1">INR {Number(entry.request.refundAmount || 0).toFixed(2)} ({entry.request.refundStatus})</p>
+                      <p className="font-semibold text-emerald-700 mt-1">₹ {Number(entry.request.refundAmount || 0).toFixed(2)} ({entry.request.refundStatus})</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-xs uppercase text-slate-500 mb-2">Returned Products</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {entry.request.returnItems.map((item) => (
+                        <div key={`${entry.id}-${item.orderItemId}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex items-center gap-3">
+                          <img
+                            src={item.productImage || 'https://via.placeholder.com/72'}
+                            alt={item.productTitle}
+                            className="h-14 w-14 rounded-md object-cover border border-slate-200"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate">{item.productTitle}</p>
+                            <p className="text-xs text-slate-600">Qty {item.quantity}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -185,7 +220,7 @@ function ReturnHistory() {
                 </div>
                 <div className="rounded-lg border border-slate-200 p-3 bg-slate-50">
                   <p className="text-xs uppercase text-slate-500">Refund</p>
-                  <p className="font-semibold text-emerald-700 mt-1">INR {Number(selectedEntry.request.refundAmount || 0).toFixed(2)} ({selectedEntry.request.refundStatus})</p>
+                  <p className="font-semibold text-emerald-700 mt-1">₹ {Number(selectedEntry.request.refundAmount || 0).toFixed(2)} ({selectedEntry.request.refundStatus})</p>
                 </div>
               </div>
 
@@ -201,11 +236,18 @@ function ReturnHistory() {
                 <div className="space-y-2">
                   {selectedEntry.request.returnItems.map((item) => (
                     <div key={`${selectedEntry.id}-${item.orderItemId}`} className="rounded-lg border border-slate-200 p-3 bg-slate-50 flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{item.productTitle}</p>
-                        <p className="text-xs text-slate-600">Qty {item.quantity}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={item.productImage || 'https://via.placeholder.com/72'}
+                          alt={item.productTitle}
+                          className="h-14 w-14 rounded-md object-cover border border-slate-200"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{item.productTitle}</p>
+                          <p className="text-xs text-slate-600">Qty {item.quantity}</p>
+                        </div>
                       </div>
-                      <p className="text-sm font-semibold text-slate-900">INR {Number(item.lineTotal || 0).toFixed(2)}</p>
+                      <p className="text-sm font-semibold text-slate-900">₹ {Number(item.lineTotal || 0).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -232,3 +274,4 @@ function ReturnHistory() {
 }
 
 export default ReturnHistory;
+

@@ -204,7 +204,7 @@ function ProductManagement() {
                 </td>
                 <td className="px-6 py-4 text-sm font-medium text-slate-800">{product.name}</td>
                 <td className="px-6 py-4 text-sm text-slate-600">{product.category || 'Uncategorized'}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-slate-900">₹{product.price.toFixed(2)}</td>
+                <td className="px-6 py-4 text-sm font-semibold text-slate-900">₹ {product.price.toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm">
                   <span className="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold">
                         {(product.images || []).length} images

@@ -98,11 +98,11 @@ function ProductCard({ product }) {
           {/* Price */}
           <div className="flex items-center gap-3 mb-4">
             <span className="text-2xl font-bold text-green-600">
-              ₹{product.price.toFixed(0)}
+              ₹ {product.price.toFixed(0)}
             </span>
             {product.originalPrice && (
               <span className="text-sm text-orange-600 line-through font-bold">
-                ₹{product.originalPrice.toFixed(0)}
+                ₹ {product.originalPrice.toFixed(0)}
               </span>
             )}
           </div>

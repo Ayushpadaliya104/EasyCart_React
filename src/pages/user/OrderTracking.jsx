@@ -174,7 +174,7 @@ function OrderTracking() {
     }
   };
 
-  const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
+  const formatMoney = (value) => `₹ ${Number(value || 0).toFixed(2)}`;
 
   const escapeHtml = (value) =>
     String(value || '')
@@ -454,7 +454,7 @@ function OrderTracking() {
                   <div className="flex-1">
                     <h4 className="font-bold text-gray-900 text-lg mb-1 text-orange-900">{product.title}</h4>
                     <p className="text-orange-700 text-sm mb-2 font-semibold">Qty: {product.quantity}</p>
-                    <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">₹{(product.price * product.quantity).toFixed(2)}</p>
+                    <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600">₹ {(product.price * product.quantity).toFixed(2)}</p>
                     <p className="text-xs mt-1 font-semibold text-slate-700">Item Status: {product.itemStatus}</p>
                   </div>
                 </div>
@@ -486,7 +486,7 @@ function OrderTracking() {
 
               <div className="border-t-2 border-teal-300 pt-6">
                 <p className="text-teal-700 text-xs font-semibold uppercase mb-2">Total Amount</p>
-                <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600">₹{order.total.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-cyan-600">₹ {order.total.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -554,7 +554,7 @@ function OrderTracking() {
               </div>
               <div className="bg-white rounded-lg border border-slate-200 p-3">
                 <p className="text-xs text-slate-500 uppercase">Total Refunded</p>
-                <p className="text-xl font-bold text-slate-900 mt-1">₹{Number(order.totalRefunded || 0).toFixed(2)}</p>
+                <p className="text-xl font-bold text-slate-900 mt-1">₹ {Number(order.totalRefunded || 0).toFixed(2)}</p>
               </div>
             </div>
 
@@ -660,7 +660,7 @@ function OrderTracking() {
                         ))}
                       </div>
                       {request.comment && <p className="text-sm text-slate-700 mt-1"><span className="font-semibold">Comment:</span> {request.comment}</p>}
-                      <p className="text-xs text-slate-600 mt-1">Refund: INR {Number(request.refundAmount || 0).toFixed(2)} ({request.refundStatus})</p>
+                      <p className="text-xs text-slate-600 mt-1">Refund: ₹ {Number(request.refundAmount || 0).toFixed(2)} ({request.refundStatus})</p>
                       <p className="text-xs text-slate-500 mt-1">
                         Requested on {request.createdAt ? new Date(request.createdAt).toLocaleString() : 'N/A'}
                       </p>
@@ -689,7 +689,7 @@ function OrderTracking() {
                         <p className="text-sm font-semibold text-slate-900">Request: {entry.returnRequestId}</p>
                         <p className="text-xs text-slate-600">{entry.processedAt ? new Date(entry.processedAt).toLocaleString() : 'N/A'}</p>
                       </div>
-                      <p className="text-sm font-bold text-emerald-700">₹{Number(entry.amount || 0).toFixed(2)}</p>
+                      <p className="text-sm font-bold text-emerald-700">₹ {Number(entry.amount || 0).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -741,3 +741,4 @@ function OrderTracking() {
 }
 
 export default OrderTracking;
+

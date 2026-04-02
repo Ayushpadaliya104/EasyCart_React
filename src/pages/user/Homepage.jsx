@@ -141,7 +141,7 @@ function Homepage() {
                 <div className="mt-2 flex items-center justify-between">
                   <div>
                     <p className="text-slate-500 text-sm">Starting at</p>
-                    <p className="text-xl font-bold text-slate-900">₹{Number(heroProduct?.price || 0).toFixed(2)}</p>
+                    <p className="text-xl font-bold text-slate-900">₹ {Number(heroProduct?.price || 0).toFixed(2)}</p>
                   </div>
                   <span className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 font-semibold">
                     View <FiArrowRight />

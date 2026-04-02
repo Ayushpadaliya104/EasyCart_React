@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { FiImage, FiSearch } from 'react-icons/fi';
 import AdminLayout from '../../components/AdminLayout';
 import { fetchAllReturnRequestsApi, updateReturnRequestStatusApi } from '../../services/orderService';
@@ -181,7 +181,7 @@ function ReturnManagement() {
                     <td className="px-4 py-4 text-sm text-slate-700">
                       <p className="font-semibold text-slate-900">{item.orderId}</p>
                       <p className="text-xs text-slate-500">Order status: {item.orderStatus}</p>
-                      <p className="text-xs text-slate-500">Total: INR {item.total.toFixed(2)}</p>
+                      <p className="text-xs text-slate-500">Total: ₹ {item.total.toFixed(2)}</p>
                     </td>
 
                     <td className="px-4 py-4 text-sm text-slate-700">
@@ -194,7 +194,7 @@ function ReturnManagement() {
                         {item.returnItems.map((returnItem) => (
                           <p key={`${item.id}-${returnItem.orderItemId}`} className="text-xs">
                             <span className="font-semibold text-slate-900">{returnItem.productTitle}</span>
-                            {' '}x{returnItem.quantity} - INR {returnItem.lineTotal.toFixed(2)}
+                            {' '}x{returnItem.quantity} - ₹ {returnItem.lineTotal.toFixed(2)}
                           </p>
                         ))}
                       </div>
@@ -203,7 +203,7 @@ function ReturnManagement() {
                     <td className="px-4 py-4 text-sm text-slate-700 max-w-[280px]">
                       <p className="font-semibold text-slate-900">{item.reasonCategory}</p>
                       <p className="line-clamp-4 text-xs mt-1">{item.comment || 'No comment'}</p>
-                      <p className="text-xs mt-1 text-slate-500">Refund: INR {item.refundAmount.toFixed(2)} ({item.refundStatus})</p>
+                      <p className="text-xs mt-1 text-slate-500">Refund: ₹ {item.refundAmount.toFixed(2)} ({item.refundStatus})</p>
                     </td>
 
                     <td className="px-4 py-4 text-sm text-slate-700">
@@ -257,3 +257,4 @@ function ReturnManagement() {
 }
 
 export default ReturnManagement;
+

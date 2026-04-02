@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const StoreSettings = require('../models/StoreSettings');
+const { creditWallet, debitWallet } = require('../services/wallet.service');
 
 const RETURN_WINDOW_DAYS = 7;
 const MAX_RETURN_IMAGE_LENGTH = 5 * 1024 * 1024;
@@ -14,6 +15,8 @@ const RETURN_STATUS_FLOW = {
   Rejected: [],
   Refunded: []
 };
+
+const ALLOWED_PAYMENT_METHODS = ['card', 'paypal', 'razorpay', 'cod', 'wallet'];
 
 const roundTwo = (value) => Number((Number(value || 0)).toFixed(2));
 
@@ -74,6 +77,8 @@ const buildOrderResponse = (orderDoc) => {
     userEmail: orderDoc.user?.email || '',
     status: orderDoc.status,
     paymentMethod: orderDoc.paymentMethod,
+    paymentStatus: orderDoc.paymentStatus || 'Pending',
+    paidAt: orderDoc.paidAt,
     subtotal: Number(orderDoc.subtotal || 0),
     tax: Number(orderDoc.tax || 0),
     shippingCharge: Number(orderDoc.shippingCharge || 0),
@@ -117,6 +122,13 @@ const buildOrderResponse = (orderDoc) => {
       status: entry.status,
       processedAt: entry.processedAt
     })),
+    walletTransactions: (orderDoc.walletTransactions || []).map((entry) => ({
+      transactionId: entry.transactionId,
+      type: entry.type,
+      amount: Number(entry.amount || 0),
+      source: entry.source,
+      createdAt: entry.createdAt
+    })),
     shippingAddress: orderDoc.shippingAddress,
     createdAt: orderDoc.createdAt,
     updatedAt: orderDoc.updatedAt,
@@ -147,6 +159,14 @@ const validateReturnImage = (value) => {
 const createOrder = async (req, res, next) => {
   try {
     const { items, shippingAddress, paymentMethod = 'card' } = req.body;
+    const cleanPaymentMethod = String(paymentMethod || 'card').trim().toLowerCase();
+
+    if (!ALLOWED_PAYMENT_METHODS.includes(cleanPaymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment method selected'
+      });
+    }
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -218,20 +238,62 @@ const createOrder = async (req, res, next) => {
     const shippingCharge = 0;
     const total = roundTwo(subtotal + tax + shippingCharge);
 
-    const order = await Order.create({
+    const orderId = new mongoose.Types.ObjectId();
+
+    const orderData = {
+      _id: orderId,
       user: req.user._id,
       items: mappedItems,
       shippingAddress: {
         ...shippingAddress,
         email: String(shippingAddress.email).toLowerCase()
       },
-      paymentMethod,
+      paymentMethod: cleanPaymentMethod,
+      paymentStatus: cleanPaymentMethod === 'wallet' ? 'Pending' : 'Paid',
+      paidAt: cleanPaymentMethod === 'wallet' ? null : new Date(),
       subtotal,
       tax,
       shippingCharge,
       total,
       totalRefunded: 0
-    });
+    };
+
+    let walletDebitResult = null;
+
+    if (cleanPaymentMethod === 'wallet') {
+      walletDebitResult = await debitWallet({
+        userId: req.user._id,
+        amount: total,
+        source: 'Purchase',
+        idempotencyKey: `wallet-purchase:${orderId}`,
+        description: 'Order payment using wallet',
+        orderId,
+        metadata: {
+          orderId: String(orderId)
+        }
+      });
+
+      if (walletDebitResult.insufficientBalance) {
+        return res.status(400).json({
+          success: false,
+          message: 'Insufficient wallet balance'
+        });
+      }
+
+      orderData.paymentStatus = 'Paid';
+      orderData.paidAt = new Date();
+      orderData.walletTransactions = [
+        {
+          transactionId: walletDebitResult.transaction._id,
+          type: 'Debit',
+          amount: Number(walletDebitResult.transaction.amount || 0),
+          source: 'Purchase',
+          createdAt: walletDebitResult.transaction.createdAt || new Date()
+        }
+      ];
+    }
+
+    const order = await Order.create(orderData);
 
     return res.status(201).json({
       success: true,
@@ -611,6 +673,19 @@ const updateReturnRequestStatus = async (req, res, next) => {
       returnRequest.refundStatus = 'Processed';
       returnRequest.refundedAt = new Date();
 
+      const walletCredit = await creditWallet({
+        userId: order.user?._id || order.user,
+        amount: refundAmount,
+        source: 'Refund',
+        idempotencyKey: `refund:${returnRequest._id}`,
+        description: `Refund for order ${order._id}`,
+        orderId: order._id,
+        returnRequestId: returnRequest._id,
+        metadata: {
+          orderStatus: order.status
+        }
+      });
+
       const existingHistory = (order.refundHistory || []).find(
         (entry) => String(entry.returnRequestId) === String(returnRequest._id)
       );
@@ -621,6 +696,16 @@ const updateReturnRequestStatus = async (req, res, next) => {
           amount: refundAmount,
           status: 'Refunded',
           processedAt: new Date()
+        });
+      }
+
+      if (!walletCredit.alreadyProcessed && walletCredit.transaction) {
+        order.walletTransactions.push({
+          transactionId: walletCredit.transaction._id,
+          type: 'Credit',
+          amount: Number(walletCredit.transaction.amount || 0),
+          source: 'Refund',
+          createdAt: walletCredit.transaction.createdAt || new Date()
         });
       }
 

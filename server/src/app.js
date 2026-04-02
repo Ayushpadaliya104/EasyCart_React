@@ -15,6 +15,7 @@ const analyticsRoutes = require('./routes/analytics.routes');
 const settingsRoutes = require('./routes/settings.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const queryRoutes = require('./routes/query.routes');
+const walletRoutes = require('./routes/wallet.routes');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/queries', queryRoutes);
+app.use('/api/wallet', walletRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({

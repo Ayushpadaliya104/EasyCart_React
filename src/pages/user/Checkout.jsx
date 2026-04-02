@@ -5,6 +5,7 @@ import Footer from '../../components/Footer';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useStoreSettings } from '../../context/StoreSettingsContext';
+import { useWallet } from '../../context/WalletContext';
 import { validateField } from '../../utils/validators';
 import { FiArrowRight } from 'react-icons/fi';
 import { createOrderApi } from '../../services/orderService';
@@ -75,6 +76,7 @@ function Checkout() {
   const { user } = useAuth();
   const { cartItems, getTotalPrice, clearCart } = useCart();
   const { settings } = useStoreSettings();
+  const { wallet, refreshWallet } = useWallet();
   const [step, setStep] = useState(1); // 1: Address, 2: Payment, 3: Review
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [errors, setErrors] = useState({});
@@ -233,6 +235,11 @@ function Checkout() {
       setApiError('');
       setPaymentStatus('');
 
+      if (paymentMethod === 'wallet' && Number(wallet?.balance || 0) < finalTotal) {
+        setApiError('Insufficient wallet balance. Please add money or choose another payment method.');
+        return;
+      }
+
       if (paymentMethod === 'razorpay') {
         await handleRazorpayPayment();
       }
@@ -255,6 +262,7 @@ function Checkout() {
         paymentMethod
       });
 
+      await refreshWallet();
       clearCart();
       navigate('/orders');
     } catch (error) {
@@ -458,11 +466,35 @@ function Checkout() {
                       />
                       <span className="font-semibold">Cash on Delivery</span>
                     </label>
+                    <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-lg border-2 border-emerald-300 bg-emerald-50/70 p-4">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="wallet"
+                        checked={paymentMethod === 'wallet'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      />
+                      <span className="font-semibold">
+                        Wallet (Available: ₹ {Number(wallet?.balance || 0).toFixed(2)})
+                      </span>
+                    </label>
                   </div>
 
                   {paymentMethod === 'razorpay' && (
                     <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
                       Secure online payment via Razorpay.
+                    </div>
+                  )}
+
+                  {paymentMethod === 'wallet' && (
+                    <div className={`mb-6 rounded-lg border p-4 text-sm ${
+                      Number(wallet?.balance || 0) >= finalTotal
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-rose-200 bg-rose-50 text-rose-700'
+                    }`}>
+                      {Number(wallet?.balance || 0) >= finalTotal
+                        ? 'Wallet balance is sufficient for this order.'
+                        : 'Insufficient wallet balance. Please add money or choose another payment method.'}
                     </div>
                   )}
 
@@ -475,6 +507,7 @@ function Checkout() {
                     </button>
                     <button
                       onClick={handleNextStep}
+                      disabled={paymentMethod === 'wallet' && Number(wallet?.balance || 0) < finalTotal}
                       className="btn-hover-lift flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 py-3 font-semibold text-white shadow-lg shadow-fuchsia-200 transition hover:brightness-110"
                     >
                       Review Order
@@ -508,10 +541,17 @@ function Checkout() {
                   <div className="mb-6 pb-6 border-b">
                     <h3 className="font-semibold mb-3">Payment Method:</h3>
                     <p className="text-gray-700">
-                      {paymentMethod === 'razorpay' ? 'Online Payment (Razorpay)' : 'Cash on Delivery'}
+                      {paymentMethod === 'razorpay'
+                        ? 'Online Payment (Razorpay)'
+                        : paymentMethod === 'wallet'
+                        ? 'Wallet'
+                        : 'Cash on Delivery'}
                     </p>
                     {paymentMethod === 'razorpay' && paymentStatus && (
                       <p className="text-sm text-green-700 mt-2">{paymentStatus}</p>
+                    )}
+                    {paymentMethod === 'wallet' && (
+                      <p className="text-sm text-slate-700 mt-2">Available Wallet Balance: ₹ {Number(wallet?.balance || 0).toFixed(2)}</p>
                     )}
                   </div>
 
@@ -543,7 +583,7 @@ function Checkout() {
                   {cartItems.map(item => (
                     <div key={item.id} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
                       <span>{item.name} x{item.quantity}</span>
-                      <span className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-semibold">₹ {(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -551,11 +591,11 @@ function Checkout() {
                 <div className="space-y-2 mb-4 pb-4 border-b">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>₹{getTotalPrice().toFixed(2)}</span>
+                    <span>₹ {getTotalPrice().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Tax</span>
-                    <span>₹{taxAmount.toFixed(2)} ({Number(settings.taxRate || 0)}%)</span>
+                    <span>₹ {taxAmount.toFixed(2)} ({Number(settings.taxRate || 0)}%)</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
@@ -565,7 +605,7 @@ function Checkout() {
 
                 <div className="mt-2 flex justify-between rounded-xl bg-gradient-to-r from-rose-50 via-fuchsia-50 to-amber-50 px-4 py-3 text-xl font-bold">
                   <span>Total</span>
-                  <span className="text-rose-500">₹{finalTotal.toFixed(2)}</span>
+                  <span className="text-rose-500">₹ {finalTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -579,4 +619,5 @@ function Checkout() {
 }
 
 export default Checkout;
+
 

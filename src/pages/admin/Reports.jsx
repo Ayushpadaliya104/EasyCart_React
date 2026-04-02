@@ -91,7 +91,7 @@ function Reports() {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Total Sales</p>
           <p className="text-2xl font-bold text-slate-900 mt-2">
-            {loading ? '...' : `₹${report.summary.totalSales.toLocaleString()}`}
+            {loading ? '...' : `₹ ${report.summary.totalSales.toLocaleString()}`}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
@@ -103,19 +103,19 @@ function Reports() {
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Average Order Value</p>
           <p className="text-2xl font-bold text-slate-900 mt-2">
-            {loading ? '...' : `₹${report.summary.averageOrderValue.toLocaleString()}`}
+            {loading ? '...' : `₹ ${report.summary.averageOrderValue.toLocaleString()}`}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Total Refunds</p>
           <p className="text-2xl font-bold text-rose-600 mt-2">
-            {loading ? '...' : `₹${report.summary.totalRefunds.toLocaleString()}`}
+            {loading ? '...' : `₹ ${report.summary.totalRefunds.toLocaleString()}`}
           </p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">Net Revenue</p>
           <p className="text-2xl font-bold text-emerald-700 mt-2">
-            {loading ? '...' : `₹${report.summary.netRevenue.toLocaleString()}`}
+            {loading ? '...' : `₹ ${report.summary.netRevenue.toLocaleString()}`}
           </p>
         </div>
       </section>
@@ -147,7 +147,7 @@ function Reports() {
                     className="bg-gradient-to-r from-cyan-500 to-emerald-500 h-full flex items-center justify-end pr-2 text-white text-sm font-semibold"
                       style={{ width: `${Math.min((month.sales / maxMonthlySales) * 100, 100)}%` }}
                     >
-                      ₹{month.sales.toLocaleString()}
+                      ₹ {month.sales.toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ function Reports() {
                 <div key={category.category}>
                   <div className="flex justify-between mb-2">
                   <span className="font-semibold text-slate-800">{category.category}</span>
-                  <span className="font-bold text-slate-900">₹{category.value.toLocaleString()}</span>
+                  <span className="font-bold text-slate-900">₹ {category.value.toLocaleString()}</span>
                   </div>
                 <div className="w-full bg-slate-100 rounded-full h-4">
                     <div

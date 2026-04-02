@@ -95,6 +95,8 @@ const normalizeOrder = (order) => {
     userEmail: order.userEmail,
     status: order.status,
     paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus || 'Pending',
+    paidAt: order.paidAt,
     subtotal: Number(order.subtotal || 0),
     tax: Number(order.tax || 0),
     shippingCharge: Number(order.shippingCharge || 0),
@@ -119,6 +121,15 @@ const normalizeOrder = (order) => {
           amount: Number(entry.amount || 0),
           status: entry.status,
           processedAt: entry.processedAt
+        }))
+      : [],
+    walletTransactions: Array.isArray(order.walletTransactions)
+      ? order.walletTransactions.map((entry) => ({
+          transactionId: entry.transactionId,
+          type: entry.type,
+          amount: Number(entry.amount || 0),
+          source: entry.source,
+          createdAt: entry.createdAt
         }))
       : [],
     shippingAddress: order.shippingAddress,

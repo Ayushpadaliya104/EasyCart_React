@@ -275,17 +275,17 @@ function ProductDetail() {
                   <p className="text-gray-700 text-xs font-semibold mb-2">💰 Best Price</p>
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-4xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      ₹{product.price.toFixed(2)}
+                      ₹ {product.price.toFixed(2)}
                     </span>
                     {product.originalPrice && (
                       <span className="text-lg text-gray-400 line-through font-bold">
-                        ₹{product.originalPrice.toFixed(2)}
+                        ₹ {product.originalPrice.toFixed(2)}
                       </span>
                     )}
                   </div>
                   {product.originalPrice && (
                     <p className="text-green-600 font-black text-xs">
-                      ✓ Save ₹{(product.originalPrice - product.price).toFixed(2)} (Best Deal!)
+                      ✓ Save ₹ {(product.originalPrice - product.price).toFixed(2)} (Best Deal!)
                     </p>
                   )}
                 </div>
