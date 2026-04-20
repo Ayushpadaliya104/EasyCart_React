@@ -3,7 +3,7 @@ const env = require('./env');
 
 const connectDatabase = async () => {
   if (!env.mongoUri) {
-    throw new Error('MONGO_URI is missing. Add it in server/.env.');
+    throw new Error('MONGO_URI is missing. Add it in backend/.env.');
   }
 
   await mongoose.connect(env.mongoUri);

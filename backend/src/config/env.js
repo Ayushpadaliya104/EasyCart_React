@@ -1,7 +1,7 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Always load env from server/.env regardless of where the node process is started.
+// Always load env from backend/.env regardless of where the node process is started.
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const env = {

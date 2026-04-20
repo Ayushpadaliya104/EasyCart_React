@@ -116,9 +116,7 @@ function ProductListing() {
 
       if (filters.categories.length > 0) {
         filtered = filtered.filter((product) => {
-          const categorySlug = typeof product.category === 'string'
-            ? product.category
-            : product.category?.slug;
+          const categorySlug = product.categorySlug || product.category;
           return filters.categories.includes(categorySlug);
         });
       }
