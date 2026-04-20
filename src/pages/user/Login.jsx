@@ -135,9 +135,9 @@ function Login() {
                   <input type="checkbox" className="w-4 h-4 cursor-pointer accent-purple-600" />
                   <span className="text-gray-700">Remember me</span>
                 </label>
-                <button type="button" className="text-purple-600 hover:text-purple-800 hover:underline font-semibold transition">
+                <Link to="/forgot-password" className="text-purple-600 hover:text-purple-800 hover:underline font-semibold transition">
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
               {/* Submit Button */}
@@ -159,15 +159,7 @@ function Login() {
             </p>
           </div>
 
-          {/* Info Box */}
-          <div className="mt-6 bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-purple-300 rounded-lg p-4 text-sm text-purple-900">
-            <p className="font-semibold mb-1">📌 Demo Credentials</p>
-            <p>Email: user@example.com</p>
-            <p>Password: 123456</p>
-            <p className="mt-2 font-semibold">👨‍💼 Admin Credentials</p>
-            <p>Email: admin@easycart.com</p>
-            <p>Password: Admin@123</p>
-          </div>
+
         </div>
       </section>
 

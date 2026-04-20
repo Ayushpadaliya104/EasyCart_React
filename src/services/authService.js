@@ -19,3 +19,25 @@ export const updateMeApi = async (payload) => {
   const response = await apiClient.put('/auth/me', payload);
   return response.data;
 };
+
+export const forgotPasswordApi = async ({ email }) => {
+  const response = await apiClient.post('/auth/forgot-password', { email });
+  return response.data;
+};
+
+export const verifyResetTokenApi = async ({ token, email }) => {
+  const response = await apiClient.get('/auth/verify-reset-token', {
+    params: { token, email }
+  });
+  return response.data;
+};
+
+export const resetPasswordApi = async ({ token, email, newPassword, confirmPassword }) => {
+  const response = await apiClient.post('/auth/reset-password', {
+    token,
+    email,
+    newPassword,
+    confirmPassword
+  });
+  return response.data;
+};

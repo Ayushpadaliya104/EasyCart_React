@@ -68,12 +68,8 @@ function Footer() {
         {/* Bottom */}
         <div className="border-t border-slate-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center text-slate-400 text-sm">
-            <p>&copy; 2024 {settings.storeName}. All rights reserved.</p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <Link to="/" className="hover:text-white transition">Privacy Policy</Link>
-              <Link to="/" className="hover:text-white transition">Terms of Service</Link>
-              <Link to="/" className="hover:text-white transition">Cookie Policy</Link>
-            </div>
+            <p>&copy; 2026 {settings.storeName}. All rights reserved.</p>
+            
           </div>
         </div>
       </div>

@@ -18,6 +18,8 @@ import OrderTracking from './pages/user/OrderTracking';
 import ReturnHistory from './pages/user/ReturnHistory';
 import Login from './pages/user/Login';
 import Register from './pages/user/Register';
+import ForgotPassword from './pages/user/ForgotPassword';
+import ResetPassword from './pages/user/ResetPassword';
 import Wishlist from './pages/user/Wishlist';
 import UserProfile from './pages/user/UserProfile';
 import QuerySupport from './pages/user/QuerySupport';
@@ -66,6 +68,8 @@ function App() {
                 <Route path="/returns" element={<ReturnHistory />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/queries" element={<QuerySupport />} />

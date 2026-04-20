@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import ProductCard from '../../components/ProductCard';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import { FiHeart, FiShoppingCart, FiCheck } from 'react-icons/fi';
 import {
   fetchProductById,
+  fetchProducts,
   fetchProductFeedback,
   saveProductRating,
   createProductReviewApi
@@ -31,6 +33,8 @@ function ProductDetail() {
   const [ratingError, setRatingError] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [reviewError, setReviewError] = useState('');
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist, wishlistItems } = useWishlist();
 
@@ -87,6 +91,43 @@ function ProductDetail() {
 
     loadFeedback();
   }, [product?.id, product?.rating, product?.reviews, user?.email]);
+
+  useEffect(() => {
+    const loadSimilarProducts = async () => {
+      if (!product?.id) {
+        setSimilarProducts([]);
+        return;
+      }
+
+      const categoryFilter = product.categorySlug || product.categoryId;
+
+      if (!categoryFilter) {
+        setSimilarProducts([]);
+        return;
+      }
+
+      try {
+        setSimilarLoading(true);
+        const data = await fetchProducts({
+          category: categoryFilter,
+          limit: 10,
+          sortBy: 'newest'
+        });
+
+        const filteredProducts = (Array.isArray(data.products) ? data.products : [])
+          .filter((item) => item.id !== product.id)
+          .slice(0, 5);
+
+        setSimilarProducts(filteredProducts);
+      } catch (_error) {
+        setSimilarProducts([]);
+      } finally {
+        setSimilarLoading(false);
+      }
+    };
+
+    loadSimilarProducts();
+  }, [product?.id, product?.categoryId, product?.categorySlug]);
 
   if (loading) {
     return (
@@ -345,6 +386,34 @@ function ProductDetail() {
               )}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Similar Products Section */}
+      <section className="py-10 px-4 bg-white border-y border-slate-200">
+        <div className="container mx-auto">
+          <div className="flex items-end justify-between gap-3 mb-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Recommended For You</p>
+              <h2 className="text-3xl md:text-4xl font-black text-slate-900">Similar Products</h2>
+            </div>
+          </div>
+
+          {similarLoading ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-600 font-semibold">
+              Loading similar products...
+            </div>
+          ) : similarProducts.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-600 font-semibold">
+              No similar products found in this category.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              {similarProducts.map((similarProduct) => (
+                <ProductCard key={similarProduct.id} product={similarProduct} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

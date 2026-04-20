@@ -75,6 +75,14 @@ const userSchema = new mongoose.Schema(
     defaultShippingAddress: {
       type: defaultShippingAddressSchema,
       default: () => ({})
+    },
+    passwordResetToken: {
+      type: String,
+      default: null
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null
     }
   },
   {
